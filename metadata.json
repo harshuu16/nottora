@@ -1,0 +1,6 @@
+{
+  "name": "Nottora",
+  "description": "Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
