@@ -28,13 +28,13 @@ const CATEGORY_META: Record<MaterialCategory, {
   },
   'important-questions': {
     title: 'Important & High-Yield Questions',
-    subtitle: 'Frequently asked university questions, 10-mark guarantee topics & solutions',
-    description: 'Curated question banks compiled from recent RTU end-term and mid-term examinations.',
+    subtitle: 'Frequently asked examination questions, 10-mark guarantee topics & solutions',
+    description: 'Curated question banks compiled from recent college end-term and mid-term examinations.',
     icon: Sparkles,
   },
   pyqs: {
     title: 'Previous Year Question Papers',
-    subtitle: 'Official RTU Semester 1 end-term examination papers (2020-2024)',
+    subtitle: 'Official Semester 1 end-term examination papers (2020-2024)',
     description: 'Review original question papers with step-by-step solutions and marking schemes.',
     icon: FileText,
   },

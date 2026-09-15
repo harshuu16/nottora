@@ -190,7 +190,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
           <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E9E3D6] flex items-start gap-3">
             <GraduationCap className="w-5 h-5 text-[#C2410C] shrink-0 mt-0.5" />
             <div className="text-xs leading-relaxed text-[#57534E]">
-              <span className="font-bold text-[#1C1917] block mb-0.5">Study Advisory for RTU Examinations:</span>
+              <span className="font-bold text-[#1C1917] block mb-0.5">Study Advisory for College Examinations:</span>
               Focus on solved numerical problems and theorem statements first. Review previous year paper marking schemes to prioritize high-weightage questions for Unit {material.unitNumber || 'Exam'}.
             </div>
           </div>

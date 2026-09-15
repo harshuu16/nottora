@@ -458,7 +458,13 @@ export async function fetchColleges(): Promise<DbCollege[]> {
       ];
     }
 
-    return data as DbCollege[];
+    // Filter out RTU or PIET if legacy rows exist in DB, keeping PCE and any future colleges
+    const filtered = (data as DbCollege[]).filter((c) => {
+      const lower = (c.name || '').toLowerCase();
+      return !lower.includes('rajasthan technical university') && !lower.includes('poornima institute');
+    });
+
+    return filtered.length > 0 ? filtered : (data as DbCollege[]);
   } catch (err) {
     console.error('[Supabase fetchColleges Exception]', err);
     return [];

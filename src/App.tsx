@@ -116,6 +116,7 @@ export default function App() {
           branchCode: hierarchy.branch.code,
           year: hierarchy.semester.year_number,
           semester: hierarchy.semester.semester_number,
+          session: ACADEMIC_SESSION_DISPLAY,
         });
       }
       if (dbSubs && dbSubs.length > 0) setSubjects(dbSubs);

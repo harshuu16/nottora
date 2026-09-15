@@ -77,11 +77,14 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
         <div className="p-5 sm:p-6 space-y-5 text-sm">
           {/* Hierarchy Banner */}
           <div className="p-3.5 rounded-xl bg-[#F5F1E8] border border-[#E4DDCF] text-xs text-[#57534E]">
-            <div className="font-semibold text-[#1C1917] mb-1">
-              Active Hierarchy Path:
+            <div className="font-semibold text-[#1C1917] mb-1.5 flex items-center justify-between flex-wrap gap-1">
+              <span>Active Hierarchy Path:</span>
+              <span className="font-mono text-[11px] text-[#78716C]">
+                College → Branch → Year → Semester → Subject → Category → Material
+              </span>
             </div>
             <div className="font-mono text-[#C2410C] flex items-center gap-1.5 flex-wrap">
-              <span>{AVAILABLE_COLLEGES.find((c) => c.id === selectedCollegeId)?.name}</span>
+              <span className="font-semibold">{AVAILABLE_COLLEGES.find((c) => c.id === selectedCollegeId)?.name || 'Poornima College of Engineering'}</span>
               <span className="text-[#A8A29E]">→</span>
               <span>{AVAILABLE_BRANCHES.find((b) => b.id === selectedBranchId)?.code}</span>
               <span className="text-[#A8A29E]">→</span>
@@ -99,7 +102,7 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
           <div>
             <label className="block text-xs font-semibold text-[#44403C] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-[#C2410C]" />
-              1. Affiliated College / Campus
+              1. College
             </label>
             <div className="space-y-2">
               {AVAILABLE_COLLEGES.map((col) => {
@@ -119,9 +122,9 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
                       <div className="text-xs sm:text-sm font-semibold text-[#1C1917]">
                         {col.name}
                       </div>
-                      <span className="text-[11px] text-[#78716C] font-mono">
-                        {col.short} Campus
-                      </span>
+                      <div className="text-[11px] text-[#78716C] mt-0.5">
+                        {col.subtitle || 'Autonomous • Jaipur'}
+                      </div>
                     </div>
                     {isSelected && <Check className="w-4 h-4 text-[#C2410C]" />}
                   </button>
@@ -134,7 +137,7 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
           <div>
             <label className="block text-xs font-semibold text-[#44403C] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <GitBranch className="w-3.5 h-3.5 text-[#C2410C]" />
-              2. Academic Branch / Department
+              2. Branch
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {AVAILABLE_BRANCHES.map((br) => {
@@ -214,7 +217,7 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-[#EAE5DA] bg-[#FAF8F5] flex items-center justify-between">
           <span className="text-xs text-[#78716C]">
-            Initial curated cohort: B.Tech CSE Semester 1
+            Curated cohort: Poornima College of Engineering · B.Tech CSE Semester 1
           </span>
           <div className="flex items-center gap-2">
             <button

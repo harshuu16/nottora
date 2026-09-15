@@ -17,10 +17,26 @@ export const CURRENT_CONTEXT: AcademicContext = {
   session: ACADEMIC_SESSION_DISPLAY,
 };
 
-export const AVAILABLE_COLLEGES = [
-  { id: 'pce', name: 'Poornima College of Engineering', short: 'PCE' },
-  { id: 'piet', name: 'Poornima Institute of Engineering & Technology', short: 'PIET' },
-  { id: 'rtu-main', name: 'Rajasthan Technical University (RTU Main Campus)', short: 'RTU' },
+export interface CollegeOption {
+  id: string;
+  name: string;
+  short: string;
+  subtitle: string;
+  city?: string;
+  state?: string;
+  status?: string;
+}
+
+export const AVAILABLE_COLLEGES: CollegeOption[] = [
+  {
+    id: 'pce',
+    name: 'Poornima College of Engineering',
+    short: 'PCE',
+    subtitle: 'Autonomous • Jaipur',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    status: 'Autonomous',
+  },
 ];
 
 export const AVAILABLE_BRANCHES = [

@@ -75,7 +75,7 @@ export const Hero: React.FC<HeroProps> = ({
             {totalMaterialsCount} Verified Files
           </span>
           <span className="text-[#D6D3D1]">·</span>
-          <span className="text-[#78716C]">RTU Syllabus Aligned</span>
+          <span className="text-[#78716C]">Autonomous Curriculum Aligned</span>
         </div>
       </div>
 

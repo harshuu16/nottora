@@ -41,7 +41,7 @@ export const StudyMotivation: React.FC = () => {
               <span>Structured by Unit</span>
             </div>
             <p className="text-xs text-[#78716C] leading-relaxed">
-              Every course is divided strictly into Units 1 through 5, matching your exact RTU university syllabus.
+              Every course is divided strictly into Units 1 through 5, matching your exact college curriculum.
             </p>
           </div>
 
