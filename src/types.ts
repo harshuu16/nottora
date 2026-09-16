@@ -19,6 +19,7 @@ export interface Subject {
   id: string;
   slug?: string;
   code: string;
+  uuid?: string;
   name: string;
   shortDescription: string;
   semester: number;
@@ -35,6 +36,9 @@ export interface Material {
   id: string;
   title: string;
   subjectId: string;
+  subjectCode?: string;
+  subjectUuid?: string;
+  subjectSlug?: string;
   subjectName: string;
   category: MaterialCategory;
   unitNumber?: number; // 1, 2, 3, 4, 5

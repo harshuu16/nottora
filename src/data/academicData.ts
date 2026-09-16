@@ -91,7 +91,7 @@ export const CATEGORIES: CategoryInfo[] = [
 
 export const SUBJECTS: Subject[] = [
   {
-    id: 'communication-skills',
+    id: '261FY507',
     slug: 'communication-skills',
     code: '261FY507',
     name: 'Communication Skills',
@@ -132,7 +132,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'chemistry',
+    id: '261FY101',
     slug: 'chemistry',
     code: '261FY101',
     name: 'Chemistry',
@@ -173,7 +173,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'beee',
+    id: '261CR104',
     slug: 'beee',
     code: '261CR104',
     name: 'BEEE',
@@ -214,7 +214,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'mathematics',
+    id: '261FY103',
     slug: 'mathematics',
     code: '261FY103',
     name: 'Mathematics',
@@ -255,7 +255,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'mpws',
+    id: '261FY629',
     slug: 'mpws',
     code: '261FY629',
     name: 'MPWS',
@@ -296,7 +296,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'c-programming',
+    id: '261FY106',
     slug: 'c-programming',
     code: '261FY106',
     name: 'C Programming',
@@ -337,7 +337,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'language-lab',
+    id: '261FY526',
     slug: 'language-lab',
     code: '261FY526',
     name: 'Language Lab',
@@ -378,7 +378,7 @@ export const SUBJECTS: Subject[] = [
     ],
   },
   {
-    id: 'wpl',
+    id: '261CR124',
     slug: 'wpl',
     code: '261CR124',
     name: 'WPL',
@@ -419,5 +419,189 @@ export const SUBJECTS: Subject[] = [
     ],
   },
 ];
+
+export interface CanonicalSubjectInfo {
+  code: string;
+  id: string;
+  slug: string;
+  name: string;
+  legacyCodes: string[];
+  legacySlugs: string[];
+  legacyNames: string[];
+  knownUuids: string[];
+}
+
+export const CANONICAL_SEMESTER_1_MAP: CanonicalSubjectInfo[] = [
+  {
+    code: '261FY507',
+    id: '261FY507',
+    slug: 'communication-skills',
+    name: 'Communication Skills',
+    legacyCodes: ['1FY1-05', '1FY1-04'],
+    legacySlugs: ['communication-skills'],
+    legacyNames: ['Communication Skills'],
+    knownUuids: ['83daf8a2-62a3-42a3-8149-2e9a5e10cd50'],
+  },
+  {
+    code: '261FY101',
+    id: '261FY101',
+    slug: 'chemistry',
+    name: 'Chemistry',
+    legacyCodes: ['1FY2-03'],
+    legacySlugs: ['chemistry'],
+    legacyNames: ['Chemistry', 'Engineering Chemistry'],
+    knownUuids: ['f9e3096c-fb5c-428a-bf63-be6561d204ab'],
+  },
+  {
+    code: '261CR104',
+    id: '261CR104',
+    slug: 'beee',
+    name: 'BEEE',
+    legacyCodes: ['1FY3-07'],
+    legacySlugs: ['beee'],
+    legacyNames: ['BEEE', 'Basic Electrical & Electronics Engineering'],
+    knownUuids: ['ea50315f-f2a7-4964-85c8-8eb8e526e51f'],
+  },
+  {
+    code: '261FY103',
+    id: '261FY103',
+    slug: 'mathematics',
+    name: 'Mathematics',
+    legacyCodes: ['1FY2-01'],
+    legacySlugs: ['mathematics', 'engineering-mathematics'],
+    legacyNames: ['Mathematics', 'Engineering Mathematics', 'Engineering Mathematics-I'],
+    knownUuids: ['7112bf1f-43a4-4ee0-8a90-303de1fb05bc'],
+  },
+  {
+    code: '261FY629',
+    id: '261FY629',
+    slug: 'mpws',
+    name: 'MPWS',
+    legacyCodes: ['1FY4-21', '1FY3-20'],
+    legacySlugs: ['mpws'],
+    legacyNames: ['MPWS', 'Manufacturing Practices Workshop'],
+    knownUuids: ['2d6358b4-e5c5-47f3-bb7e-e6cf5097ed9f'],
+  },
+  {
+    code: '261FY106',
+    id: '261FY106',
+    slug: 'c-programming',
+    name: 'C Programming',
+    legacyCodes: ['1FY3-06'],
+    legacySlugs: ['c-programming', 'programming-in-c'],
+    legacyNames: ['C Programming', 'Programming in C', 'Programming for Problem Solving'],
+    knownUuids: ['4d45360f-ab27-4a7b-a63f-89ce15aab471'],
+  },
+  {
+    code: '261FY526',
+    id: '261FY526',
+    slug: 'language-lab',
+    name: 'Language Lab',
+    legacyCodes: [],
+    legacySlugs: ['language-lab'],
+    legacyNames: ['Language Lab'],
+    knownUuids: [],
+  },
+  {
+    code: '261CR124',
+    id: '261CR124',
+    slug: 'wpl',
+    name: 'WPL',
+    legacyCodes: [],
+    legacySlugs: ['wpl'],
+    legacyNames: ['WPL', 'Web Programming Lab'],
+    knownUuids: [],
+  },
+];
+
+/**
+ * Resolves any identifier (code, legacy code, slug, name, or database UUID)
+ * to the canonical Semester 1 subject code / subject ID (e.g. "261CR104" for BEEE).
+ */
+export function resolveSubjectIdentifier(val: unknown): string | null {
+  if (!val || typeof val !== 'string') return null;
+  const clean = val.trim().toLowerCase();
+  if (!clean) return null;
+
+  for (const item of CANONICAL_SEMESTER_1_MAP) {
+    if (item.code.toLowerCase() === clean) return item.code;
+    if (item.id.toLowerCase() === clean) return item.code;
+    if (item.slug.toLowerCase() === clean) return item.code;
+    if (item.name.toLowerCase() === clean) return item.code;
+    if (item.legacyCodes.some((lc) => lc.toLowerCase() === clean)) return item.code;
+    if (item.legacySlugs.some((ls) => ls.toLowerCase() === clean)) return item.code;
+    if (item.legacyNames.some((ln) => ln.toLowerCase() === clean)) return item.code;
+    if (item.knownUuids.some((u) => u.toLowerCase() === clean)) return item.code;
+  }
+
+  return null;
+}
+
+/**
+ * Resolves any identifier to the canonical subject object from SUBJECTS.
+ */
+export function getCanonicalSubject(val: unknown): Subject | null {
+  const code = resolveSubjectIdentifier(val);
+  if (!code) return null;
+  return SUBJECTS.find((s) => s.code === code || s.id === code) || null;
+}
+
+/**
+ * Unified relationship / filter logic to determine whether a material belongs to a subject.
+ * Used identically for:
+ * 1. Subject card material count
+ * 2. Subject page "Available Materials" count
+ * 3. Subject page category counts (Notes, PYQs, etc.)
+ * 4. Subject page filtered list of materials
+ * 5. Category page per-subject filtering
+ */
+export function materialBelongsToSubject(
+  material: Material,
+  subject: Subject | { id: string; code?: string; slug?: string; uuid?: string; name?: string }
+): boolean {
+  if (!material || !subject) return false;
+
+  // 1. Direct match on subjectId or code (e.g. '261CR104')
+  if (material.subjectId && (material.subjectId === subject.id || material.subjectId === subject.code)) {
+    return true;
+  }
+  if (material.subjectCode && (material.subjectCode === subject.code || material.subjectCode === subject.id)) {
+    return true;
+  }
+
+  // 2. Direct database UUID match
+  if (material.subjectUuid && (subject as any).uuid && material.subjectUuid === (subject as any).uuid) {
+    return true;
+  }
+  if (material.subjectId && (subject as any).uuid && material.subjectId === (subject as any).uuid) {
+    return true;
+  }
+
+  // 3. Direct slug match
+  if (subject.slug && (material.subjectSlug === subject.slug || material.subjectId === subject.slug)) {
+    return true;
+  }
+
+  // 4. Canonical resolution across all known aliases (codes, legacy codes, DB UUIDs, slugs)
+  const matCanonical =
+    resolveSubjectIdentifier(material.subjectCode) ||
+    resolveSubjectIdentifier(material.subjectId) ||
+    resolveSubjectIdentifier(material.subjectUuid) ||
+    resolveSubjectIdentifier(material.subjectSlug) ||
+    resolveSubjectIdentifier(material.subjectName);
+
+  const subCanonical =
+    resolveSubjectIdentifier(subject.code) ||
+    resolveSubjectIdentifier(subject.id) ||
+    resolveSubjectIdentifier((subject as any).uuid) ||
+    resolveSubjectIdentifier(subject.slug) ||
+    resolveSubjectIdentifier((subject as any).name);
+
+  if (matCanonical && subCanonical && matCanonical === subCanonical) {
+    return true;
+  }
+
+  return false;
+}
 
 export const ALL_MATERIALS: Material[] = [];

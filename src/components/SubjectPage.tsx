@@ -13,6 +13,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { Material, MaterialCategory, Subject } from '../types';
+import { materialBelongsToSubject } from '../data/academicData';
 import { MaterialCard } from './MaterialCard';
 
 interface SubjectPageProps {
@@ -47,7 +48,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   // Filter materials for this subject based on category and search query
   const filteredMaterials = useMemo(() => {
     return materials.filter((m) => {
-      if (m.subjectId !== subject.id) return false;
+      if (!materialBelongsToSubject(m, subject)) return false;
       if (selectedCategory !== 'all' && m.category !== selectedCategory) return false;
       if (subjectSearch.trim()) {
         const q = subjectSearch.toLowerCase();
@@ -58,7 +59,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
       }
       return true;
     });
-  }, [materials, subject.id, selectedCategory, subjectSearch]);
+  }, [materials, subject, selectedCategory, subjectSearch]);
 
   const toggleUnitCollapse = (unitNum: number) => {
     setCollapsedUnits((prev) => ({ ...prev, [unitNum]: !prev[unitNum] }));
@@ -72,13 +73,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: 0 };
     materials
-      .filter((m) => m.subjectId === subject.id)
+      .filter((m) => materialBelongsToSubject(m, subject))
       .forEach((m) => {
         counts.all = (counts.all || 0) + 1;
         counts[m.category] = (counts[m.category] || 0) + 1;
       });
     return counts;
-  }, [materials, subject.id]);
+  }, [materials, subject]);
 
   const categoryTabs: Array<{ id: MaterialCategory | 'all'; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     { id: 'all', label: 'All Materials', icon: GraduationCap },

@@ -4,7 +4,9 @@ import {
   CURRENT_CONTEXT, 
   SUBJECTS as DEFAULT_SUBJECTS, 
   ALL_MATERIALS as DEFAULT_MATERIALS,
-  ACADEMIC_SESSION_DISPLAY
+  ACADEMIC_SESSION_DISPLAY,
+  materialBelongsToSubject,
+  resolveSubjectIdentifier
 } from './data/academicData';
 import { 
   fetchAcademicHierarchy,
@@ -290,15 +292,24 @@ export default function App() {
     }, 100);
   };
 
+  // Computed subjects with unified, live material counts matching SubjectPage exactly
+  const enrichedSubjects = useMemo(() => {
+    return subjects.map((sub) => ({
+      ...sub,
+      totalMaterials: materials.filter((m) => materialBelongsToSubject(m, sub)).length,
+    }));
+  }, [subjects, materials]);
+
   const handleSelectSubject = (subjectId: string, initialCategory?: MaterialCategory) => {
-    const matched = subjects.find(
-      (s) => s.id === subjectId || 
+    const resolvedCode = resolveSubjectIdentifier(subjectId);
+    const matched = enrichedSubjects.find(
+      (s) => (resolvedCode && (s.code === resolvedCode || s.id === resolvedCode)) ||
+             s.id === subjectId || 
              s.slug === subjectId || 
              s.code.toLowerCase() === subjectId.toLowerCase() ||
-             (subjectId === 'engineering-mathematics' && s.id === 'mathematics') ||
-             (subjectId === 'programming-in-c' && s.id === 'c-programming')
+             (s.uuid && s.uuid === subjectId)
     );
-    const resolvedId = matched ? matched.id : subjectId;
+    const resolvedId = matched ? matched.id : (resolvedCode || subjectId);
     setView({ type: 'subject', subjectId: resolvedId, initialCategory });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -315,17 +326,19 @@ export default function App() {
 
   const currentSubjectObj = useMemo(() => {
     if (view.type === 'subject') {
+      const resolvedCode = resolveSubjectIdentifier(view.subjectId);
       return (
-        subjects.find(
-          (s) => s.id === view.subjectId || 
+        enrichedSubjects.find(
+          (s) => (resolvedCode && (s.code === resolvedCode || s.id === resolvedCode)) ||
+                 s.id === view.subjectId || 
+                 s.code === view.subjectId || 
                  s.slug === view.subjectId ||
-                 (view.subjectId === 'engineering-mathematics' && s.id === 'mathematics') ||
-                 (view.subjectId === 'programming-in-c' && s.id === 'c-programming')
-        ) || subjects[0]
+                 (s.uuid && s.uuid === view.subjectId)
+        ) || enrichedSubjects[0]
       );
     }
     return null;
-  }, [view, subjects]);
+  }, [view, enrichedSubjects]);
 
   return (
     <div className="min-h-screen bg-[#FBF9F5] text-[#1C1917] flex flex-col font-sans">
@@ -407,7 +420,7 @@ export default function App() {
             {/* Subjects Section (All 8 Subjects) */}
             <div className="mb-14">
               <SubjectGrid
-                subjects={subjects}
+                subjects={enrichedSubjects}
                 onSelectSubject={(id) => handleSelectSubject(id)}
               />
             </div>
@@ -443,7 +456,7 @@ export default function App() {
         {view.type === 'category' && (
           <CategoryPage
             category={view.category}
-            subjects={subjects}
+            subjects={enrichedSubjects}
             materials={materials}
             onBack={handleNavigateHome}
             onOpenMaterial={setActiveMaterial}
@@ -475,7 +488,7 @@ export default function App() {
       <SearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
-        subjects={subjects}
+        subjects={enrichedSubjects}
         materials={materials}
         onOpenMaterial={setActiveMaterial}
         onSelectSubject={(id) => handleSelectSubject(id)}
@@ -522,7 +535,7 @@ export default function App() {
             // ignore
           }
         }}
-        subjects={subjects}
+        subjects={enrichedSubjects}
         onMaterialsUpdated={refreshAcademicData}
       />
 

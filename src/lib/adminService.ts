@@ -6,6 +6,7 @@ import {
   DbMaterial,
   MaterialCategory 
 } from '../types';
+import { resolveSubjectIdentifier, CANONICAL_SEMESTER_1_MAP } from '../data/academicData';
 
 /**
  * ============================================================================
@@ -90,22 +91,32 @@ export async function adminUploadMaterial(
   let resolvedSubjectSlug = input.subject_slug;
 
   if (!isValidUuid(resolvedSubjectId)) {
-    // Attempt lookup in Supabase subjects table by slug, code, or name
-    const { data: dbSub } = await client
-      .from('subjects')
-      .select('id, slug, code, name')
-      .or(`slug.eq.${input.subject_id},code.eq.${input.subject_id},name.ilike.${input.subject_id}`)
-      .maybeSingle();
-
-    if (dbSub && dbSub.id && isValidUuid(dbSub.id)) {
-      resolvedSubjectId = dbSub.id;
+    // 1. Try resolving via canonical Semester 1 map
+    const canonicalCode = resolveSubjectIdentifier(resolvedSubjectId);
+    const mapEntry = CANONICAL_SEMESTER_1_MAP.find((m) => m.code === canonicalCode);
+    if (mapEntry?.knownUuids?.[0] && isValidUuid(mapEntry.knownUuids[0])) {
+      resolvedSubjectId = mapEntry.knownUuids[0];
       if (!resolvedSubjectSlug) {
-        resolvedSubjectSlug = dbSub.slug || undefined;
+        resolvedSubjectSlug = mapEntry.slug;
       }
     } else {
-      throw new Error(
-        `Invalid subject identifier "${input.subject_id}". Expected a valid Supabase subjects.id UUID.`
-      );
+      // 2. Attempt lookup in Supabase subjects table by slug, code, or name
+      const { data: dbSub } = await client
+        .from('subjects')
+        .select('id, slug, code, name')
+        .or(`slug.eq.${input.subject_id},code.eq.${input.subject_id},name.ilike.${input.subject_id}`)
+        .maybeSingle();
+
+      if (dbSub && dbSub.id && isValidUuid(dbSub.id)) {
+        resolvedSubjectId = dbSub.id;
+        if (!resolvedSubjectSlug) {
+          resolvedSubjectSlug = dbSub.slug || undefined;
+        }
+      } else {
+        throw new Error(
+          `Invalid subject identifier "${input.subject_id}". Expected a valid Supabase subjects.id UUID.`
+        );
+      }
     }
   }
 

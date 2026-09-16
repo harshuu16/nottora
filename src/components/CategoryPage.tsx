@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowLeft, Search, BookOpen, Sparkles, FileText, FlaskConical, Paperclip } from 'lucide-react';
 import { Material, MaterialCategory, Subject } from '../types';
+import { materialBelongsToSubject } from '../data/academicData';
 import { MaterialCard } from './MaterialCard';
 
 interface CategoryPageProps {
@@ -71,7 +72,16 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   const filteredMaterials = useMemo(() => {
     return materials.filter((m) => {
       if (m.category !== category) return false;
-      if (selectedSubjectId !== 'all' && m.subjectId !== selectedSubjectId) return false;
+      if (selectedSubjectId !== 'all') {
+        const targetSub = subjects.find(
+          (s) => s.id === selectedSubjectId || s.code === selectedSubjectId || s.slug === selectedSubjectId
+        );
+        if (targetSub) {
+          if (!materialBelongsToSubject(m, targetSub)) return false;
+        } else if (m.subjectId !== selectedSubjectId) {
+          return false;
+        }
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -83,7 +93,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
       }
       return true;
     });
-  }, [materials, category, selectedSubjectId, searchQuery]);
+  }, [materials, category, selectedSubjectId, subjects, searchQuery]);
 
   return (
     <div className="pb-16 animate-in fade-in duration-200">

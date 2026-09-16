@@ -12,7 +12,21 @@ import {
   CreateSubjectInput,
   CreateMaterialInput
 } from '../types';
-import { SUBJECTS as FALLBACK_SUBJECTS, ALL_MATERIALS as FALLBACK_MATERIALS, ACADEMIC_SESSION_DISPLAY } from '../data/academicData';
+import { 
+  SUBJECTS as FALLBACK_SUBJECTS, 
+  ALL_MATERIALS as FALLBACK_MATERIALS, 
+  ACADEMIC_SESSION_DISPLAY,
+  CANONICAL_SEMESTER_1_MAP,
+  resolveSubjectIdentifier,
+  getCanonicalSubject,
+  materialBelongsToSubject
+} from '../data/academicData';
+
+// Validate standard UUID strings (PostgreSQL uuid type)
+export function isValidUuid(val: unknown): boolean {
+  if (typeof val !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val.trim());
+}
 
 // Clean and normalize environment variable values
 function cleanEnvString(val: unknown): string {
@@ -346,23 +360,22 @@ export async function triggerFileDownload(
 
 /**
  * Maps a Supabase `subjects` row into the frontend Subject interface,
- * hydrating units and metadata appropriately.
+ * hydrating units, canonical codes, and metadata appropriately.
  */
 export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): Subject {
-  const fallback = FALLBACK_SUBJECTS.find(
-    s => s.id === dbSubject.id || 
-         s.slug === (dbSubject.slug || '') || 
-         s.code === dbSubject.code || 
-         s.name.toLowerCase() === (dbSubject.name || '').toLowerCase() ||
-         (s.id === 'mathematics' && (dbSubject.name === 'Engineering Mathematics' || dbSubject.code === '1FY2-01' || dbSubject.slug === 'engineering-mathematics')) ||
-         (s.id === 'c-programming' && (dbSubject.name === 'Programming in C' || dbSubject.code === '1FY3-06' || dbSubject.slug === 'programming-in-c')) ||
-         (s.id === 'communication-skills' && (dbSubject.name === 'Communication Skills' || dbSubject.code === '1FY1-04' || dbSubject.code === '1FY1-05')) ||
-         (s.id === 'chemistry' && (dbSubject.name === 'Chemistry' || dbSubject.code === '1FY2-03')) ||
-         (s.id === 'beee' && (dbSubject.name === 'BEEE' || dbSubject.code === '1FY3-07')) ||
-         (s.id === 'mpws' && (dbSubject.name === 'MPWS' || dbSubject.code === '1FY3-20' || dbSubject.code === '1FY4-21')) ||
-         (s.id === 'language-lab' && (dbSubject.name === 'Language Lab' || dbSubject.code === '261FY526')) ||
-         (s.id === 'wpl' && (dbSubject.name === 'WPL' || dbSubject.code === '261CR124'))
-  );
+  const resolvedCode =
+    resolveSubjectIdentifier(dbSubject.code) ||
+    resolveSubjectIdentifier(dbSubject.id) ||
+    resolveSubjectIdentifier(dbSubject.slug) ||
+    resolveSubjectIdentifier(dbSubject.name);
+
+  const fallback = (resolvedCode ? getCanonicalSubject(resolvedCode) : null) ||
+    FALLBACK_SUBJECTS.find(
+      s => s.id === dbSubject.id || 
+           s.code === dbSubject.code ||
+           s.slug === (dbSubject.slug || '') || 
+           s.name.toLowerCase() === (dbSubject.name || '').toLowerCase()
+    );
 
   const semesterNum = typeof dbSubject.semester === 'number' 
     ? dbSubject.semester 
@@ -372,11 +385,18 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
     ? dbSubject.year
     : (parseInt(String(dbSubject.year || '1').replace(/\D/g, ''), 10) || 1);
 
+  const finalCode = fallback?.code || resolvedCode || dbSubject.code;
+  const finalId = fallback?.id || resolvedCode || dbSubject.id;
+  const finalUuid = isValidUuid(dbSubject.id)
+    ? dbSubject.id
+    : (fallback?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === finalCode)?.knownUuids?.[0]);
+
   return {
-    id: fallback?.id || dbSubject.id,
+    id: finalId,
+    code: finalCode,
+    uuid: finalUuid,
     slug: fallback?.slug || dbSubject.slug || dbSubject.id,
     name: fallback?.name || dbSubject.name,
-    code: fallback?.code || dbSubject.code,
     semester: semesterNum,
     year: yearNum,
     branch: dbSubject.branch || fallback?.branch || 'B.Tech CSE',
@@ -397,20 +417,41 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
 
 /**
  * Maps a Supabase `materials` row into the frontend Material interface.
+ * Associates the material with canonical subject code/ID (e.g., '261CR104' for BEEE)
+ * and preserves the raw database UUID and joined subject fields.
  */
-export function mapDbMaterialToMaterial(dbMaterial: DbMaterial, subjectName?: string): Material {
-  const fallbackSubject = FALLBACK_SUBJECTS.find(
-    s => s.id === dbMaterial.subject_id || 
-         (s as any).slug === dbMaterial.subject_id ||
-         (dbMaterial.subject_id === 'engineering-mathematics' && s.id === 'mathematics') ||
-         (dbMaterial.subject_id === 'programming-in-c' && s.id === 'c-programming')
-  );
-  const resolvedSubjectName = subjectName || fallbackSubject?.name || 'Course Study Material';
+export function mapDbMaterialToMaterial(dbMaterial: any, subjectName?: string): Material {
+  // Resolve canonical subject code (e.g. '261CR104' for BEEE)
+  const resolvedCode =
+    resolveSubjectIdentifier(dbMaterial.subjects?.code) ||
+    resolveSubjectIdentifier(dbMaterial.subjects?.id) ||
+    resolveSubjectIdentifier(dbMaterial.subjects?.slug) ||
+    resolveSubjectIdentifier(dbMaterial.subject_id) ||
+    resolveSubjectIdentifier(subjectName) ||
+    resolveSubjectIdentifier(dbMaterial.subjects?.name);
+
+  const canonicalSubject = resolvedCode ? getCanonicalSubject(resolvedCode) : null;
+  const resolvedSubjectName =
+    canonicalSubject?.name ||
+    subjectName ||
+    dbMaterial.subjects?.name ||
+    'Course Study Material';
+  const resolvedSubjectCode = canonicalSubject?.code || resolvedCode || dbMaterial.subjects?.code || dbMaterial.subject_id;
+  const resolvedSubjectSlug = canonicalSubject?.slug || dbMaterial.subjects?.slug || 'subject';
+  const resolvedSubjectUuid = isValidUuid(dbMaterial.subject_id) 
+    ? dbMaterial.subject_id 
+    : (isValidUuid(dbMaterial.subjects?.id) 
+        ? dbMaterial.subjects?.id 
+        : canonicalSubject?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === resolvedSubjectCode)?.knownUuids?.[0]);
 
   return {
     id: dbMaterial.id,
     title: dbMaterial.title,
-    subjectId: dbMaterial.subject_id,
+    // Canonical subject identifier for this material (e.g. "261CR104" for BEEE)
+    subjectId: resolvedSubjectCode,
+    subjectCode: resolvedSubjectCode,
+    subjectUuid: resolvedSubjectUuid,
+    subjectSlug: resolvedSubjectSlug,
     subjectName: resolvedSubjectName,
     category: dbMaterial.category as MaterialCategory,
     unitNumber: dbMaterial.unit || undefined,
@@ -827,8 +868,20 @@ export async function fetchMaterials(options?: {
       .eq('published', true)
       .order('created_at', { ascending: false });
 
+    let targetSubjectUuid: string | null = null;
     if (options?.subjectId) {
-      query = query.eq('subject_id', options.subjectId);
+      if (isValidUuid(options.subjectId)) {
+        targetSubjectUuid = options.subjectId;
+        query = query.eq('subject_id', options.subjectId);
+      } else {
+        const resolvedCode = resolveSubjectIdentifier(options.subjectId);
+        const mapEntry = CANONICAL_SEMESTER_1_MAP.find(m => m.code === resolvedCode);
+        const knownUuid = mapEntry?.knownUuids?.[0];
+        if (knownUuid && isValidUuid(knownUuid)) {
+          targetSubjectUuid = knownUuid;
+          query = query.eq('subject_id', knownUuid);
+        }
+      }
     }
 
     if (options?.category && options.category !== 'all') {
@@ -850,10 +903,16 @@ export async function fetchMaterials(options?: {
       return [];
     }
 
-    return (data as any[]).map(row => {
+    const mapped = (data as any[]).map(row => {
       const subjectName = row.subjects?.name;
       return mapDbMaterialToMaterial(row as DbMaterial, subjectName);
     });
+
+    if (options?.subjectId) {
+      return mapped.filter(m => materialBelongsToSubject(m, { id: options.subjectId! }));
+    }
+
+    return mapped;
   } catch (err) {
     console.error('[Supabase fetchMaterials Exception]', err);
     return [];
@@ -878,17 +937,32 @@ export async function searchMaterialsDb(
   }
 
   try {
+    let targetSubjectUuid: string | null = null;
+    if (subjectId) {
+      if (isValidUuid(subjectId)) {
+        targetSubjectUuid = subjectId;
+      } else {
+        const resolvedCode = resolveSubjectIdentifier(subjectId);
+        const mapEntry = CANONICAL_SEMESTER_1_MAP.find(m => m.code === resolvedCode);
+        const knownUuid = mapEntry?.knownUuids?.[0];
+        if (knownUuid && isValidUuid(knownUuid)) {
+          targetSubjectUuid = knownUuid;
+        }
+      }
+    }
+
     // 1. Attempt RPC call to Postgres search function
     const { data: rpcData, error: rpcError } = await client.rpc('search_academic_materials', {
       search_query: trimmed,
       filter_category: category && category !== 'all' ? category : null,
-      filter_subject_id: subjectId || null,
+      filter_subject_id: targetSubjectUuid || null,
     });
 
     if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
-      return rpcData.map((row: any) =>
+      const mapped = rpcData.map((row: any) =>
         mapDbMaterialToMaterial(row as DbMaterial, row.subject_name)
       );
+      return subjectId ? mapped.filter(m => materialBelongsToSubject(m, { id: subjectId })) : mapped;
     }
 
     // 2. Fallback to Supabase ILIKE query
@@ -908,8 +982,8 @@ export async function searchMaterialsDb(
       query = query.eq('category', category);
     }
 
-    if (subjectId) {
-      query = query.eq('subject_id', subjectId);
+    if (targetSubjectUuid) {
+      query = query.eq('subject_id', targetSubjectUuid);
     }
 
     // ILIKE search on title, topic, or description
@@ -920,10 +994,12 @@ export async function searchMaterialsDb(
       return [];
     }
 
-    return (data as any[]).map(row => {
+    const mapped = (data as any[]).map(row => {
       const subjectName = row.subjects?.name;
       return mapDbMaterialToMaterial(row as DbMaterial, subjectName);
     });
+
+    return subjectId ? mapped.filter(m => materialBelongsToSubject(m, { id: subjectId })) : mapped;
   } catch (err) {
     console.error('[Supabase searchMaterialsDb Exception]', err);
     return [];
@@ -998,11 +1074,21 @@ export async function adminUploadMaterial(input: CreateMaterialInput): Promise<M
   const client = getSupabase();
   if (!client) throw new Error('Supabase client not initialized.');
 
+  // If input.subject_id is not a raw UUID, resolve it to the database UUID
+  let resolvedSubjectUuid = input.subject_id;
+  if (!isValidUuid(resolvedSubjectUuid)) {
+    const canonicalCode = resolveSubjectIdentifier(resolvedSubjectUuid);
+    const mapEntry = CANONICAL_SEMESTER_1_MAP.find(m => m.code === canonicalCode);
+    if (mapEntry?.knownUuids?.[0] && isValidUuid(mapEntry.knownUuids[0])) {
+      resolvedSubjectUuid = mapEntry.knownUuids[0];
+    }
+  }
+
   const { data, error } = await client
     .from('materials')
     .insert([{
       title: input.title,
-      subject_id: input.subject_id,
+      subject_id: resolvedSubjectUuid,
       category: input.category,
       unit: input.unit ?? null,
       topic: input.topic || null,
@@ -1017,7 +1103,10 @@ export async function adminUploadMaterial(input: CreateMaterialInput): Promise<M
     .select(`
       *,
       subjects:subject_id (
-        name
+        id,
+        name,
+        code,
+        slug
       )
     `)
     .single();
