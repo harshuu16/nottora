@@ -292,7 +292,11 @@ export default function App() {
 
   const handleSelectSubject = (subjectId: string, initialCategory?: MaterialCategory) => {
     const matched = subjects.find(
-      (s) => s.id === subjectId || s.slug === subjectId || s.code.toLowerCase() === subjectId.toLowerCase()
+      (s) => s.id === subjectId || 
+             s.slug === subjectId || 
+             s.code.toLowerCase() === subjectId.toLowerCase() ||
+             (subjectId === 'engineering-mathematics' && s.id === 'mathematics') ||
+             (subjectId === 'programming-in-c' && s.id === 'c-programming')
     );
     const resolvedId = matched ? matched.id : subjectId;
     setView({ type: 'subject', subjectId: resolvedId, initialCategory });
@@ -313,7 +317,10 @@ export default function App() {
     if (view.type === 'subject') {
       return (
         subjects.find(
-          (s) => s.id === view.subjectId || s.slug === view.subjectId
+          (s) => s.id === view.subjectId || 
+                 s.slug === view.subjectId ||
+                 (view.subjectId === 'engineering-mathematics' && s.id === 'mathematics') ||
+                 (view.subjectId === 'programming-in-c' && s.id === 'c-programming')
         ) || subjects[0]
       );
     }

@@ -350,7 +350,18 @@ export async function triggerFileDownload(
  */
 export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): Subject {
   const fallback = FALLBACK_SUBJECTS.find(
-    s => s.id === dbSubject.id || s.slug === (dbSubject.slug || '') || s.code === dbSubject.code || s.name === dbSubject.name
+    s => s.id === dbSubject.id || 
+         s.slug === (dbSubject.slug || '') || 
+         s.code === dbSubject.code || 
+         s.name.toLowerCase() === (dbSubject.name || '').toLowerCase() ||
+         (s.id === 'mathematics' && (dbSubject.name === 'Engineering Mathematics' || dbSubject.code === '1FY2-01' || dbSubject.slug === 'engineering-mathematics')) ||
+         (s.id === 'c-programming' && (dbSubject.name === 'Programming in C' || dbSubject.code === '1FY3-06' || dbSubject.slug === 'programming-in-c')) ||
+         (s.id === 'communication-skills' && (dbSubject.name === 'Communication Skills' || dbSubject.code === '1FY1-04' || dbSubject.code === '1FY1-05')) ||
+         (s.id === 'chemistry' && (dbSubject.name === 'Chemistry' || dbSubject.code === '1FY2-03')) ||
+         (s.id === 'beee' && (dbSubject.name === 'BEEE' || dbSubject.code === '1FY3-07')) ||
+         (s.id === 'mpws' && (dbSubject.name === 'MPWS' || dbSubject.code === '1FY3-20' || dbSubject.code === '1FY4-21')) ||
+         (s.id === 'language-lab' && (dbSubject.name === 'Language Lab' || dbSubject.code === '261FY526')) ||
+         (s.id === 'wpl' && (dbSubject.name === 'WPL' || dbSubject.code === '261CR124'))
   );
 
   const semesterNum = typeof dbSubject.semester === 'number' 
@@ -362,17 +373,17 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
     : (parseInt(String(dbSubject.year || '1').replace(/\D/g, ''), 10) || 1);
 
   return {
-    id: dbSubject.id,
-    slug: dbSubject.slug || fallback?.slug || fallback?.id || dbSubject.id,
-    name: dbSubject.name,
-    code: dbSubject.code,
+    id: fallback?.id || dbSubject.id,
+    slug: fallback?.slug || dbSubject.slug || dbSubject.id,
+    name: fallback?.name || dbSubject.name,
+    code: fallback?.code || dbSubject.code,
     semester: semesterNum,
     year: yearNum,
     branch: dbSubject.branch || fallback?.branch || 'B.Tech CSE',
     college: fallback?.college || 'Poornima College of Engineering',
-    shortDescription: dbSubject.description || fallback?.shortDescription || `${dbSubject.name} curriculum`,
-    iconName: dbSubject.icon_name || fallback?.iconName || 'BookOpen',
-    credits: dbSubject.credits || fallback?.credits || 3,
+    shortDescription: fallback?.shortDescription || dbSubject.description || `${dbSubject.name} curriculum`,
+    iconName: fallback?.iconName || dbSubject.icon_name || 'BookOpen',
+    credits: fallback?.credits || dbSubject.credits || 3,
     totalMaterials: typeof totalMaterialsCount === 'number' ? totalMaterialsCount : 0,
     units: fallback?.units || [
       { unitNumber: 1, title: 'Unit 1 Fundamentals', keyTopics: ['Core Theory', 'Key Definitions'] },
@@ -389,7 +400,10 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
  */
 export function mapDbMaterialToMaterial(dbMaterial: DbMaterial, subjectName?: string): Material {
   const fallbackSubject = FALLBACK_SUBJECTS.find(
-    s => s.id === dbMaterial.subject_id || (s as any).slug === dbMaterial.subject_id
+    s => s.id === dbMaterial.subject_id || 
+         (s as any).slug === dbMaterial.subject_id ||
+         (dbMaterial.subject_id === 'engineering-mathematics' && s.id === 'mathematics') ||
+         (dbMaterial.subject_id === 'programming-in-c' && s.id === 'c-programming')
   );
   const resolvedSubjectName = subjectName || fallbackSubject?.name || 'Course Study Material';
 
@@ -689,7 +703,18 @@ export async function fetchSubjects(): Promise<Subject[]> {
         .order('name', { ascending: true });
 
       if (simpleSubjects && simpleSubjects.length > 0) {
-        return (simpleSubjects as DbSubject[]).map(s => mapDbSubjectToSubject(s));
+        const simpleMapped = (simpleSubjects as DbSubject[]).map(s => mapDbSubjectToSubject(s));
+        const sem1Codes = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.code));
+        const sem1Ids = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.id));
+        const filtered = simpleMapped.filter(s => s.semester !== 1 || sem1Codes.has(s.code) || sem1Ids.has(s.id));
+        const existingIds = new Set(filtered.map(s => s.id));
+        const existingCodes = new Set(filtered.map(s => s.code));
+        for (const fb of FALLBACK_SUBJECTS) {
+          if (!existingIds.has(fb.id) && !existingCodes.has(fb.code)) {
+            filtered.push(fb);
+          }
+        }
+        return filtered;
       }
 
       if (subjectsErr) handleSupabaseApiError('fetchSubjects', subjectsErr.message);
@@ -709,7 +734,7 @@ export async function fetchSubjects(): Promise<Subject[]> {
       }
     }
 
-    return dbSubjects.map((row: any) => {
+    const mappedList = dbSubjects.map((row: any) => {
       const semObj = row.semesters;
       const branchObj = semObj?.branches;
       const collegeObj = branchObj?.colleges;
@@ -727,6 +752,47 @@ export async function fetchSubjects(): Promise<Subject[]> {
       }
       return mapped;
     });
+
+    // Filter out obsolete Semester 1 subjects from older schemes that are not part of current Autonomous Semester 1
+    const sem1Codes = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.code));
+    const sem1Ids = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.id));
+    const validSubjects = mappedList.filter(s => {
+      if (s.semester === 1) {
+        return sem1Codes.has(s.code) || sem1Ids.has(s.id);
+      }
+      return true;
+    });
+
+    // Guarantee all 8 canonical Semester 1 subjects are available
+    const existingIds = new Set(validSubjects.map(s => s.id));
+    const existingCodes = new Set(validSubjects.map(s => s.code));
+    for (const fb of FALLBACK_SUBJECTS) {
+      if (!existingIds.has(fb.id) && !existingCodes.has(fb.code)) {
+        validSubjects.push(fb);
+      }
+    }
+
+    const CANONICAL_ORDER = [
+      '261FY507', // Communication Skills
+      '261FY101', // Chemistry
+      '261CR104', // BEEE
+      '261FY103', // Mathematics
+      '261FY629', // MPWS
+      '261FY106', // C Programming
+      '261FY526', // Language Lab
+      '261CR124', // WPL
+    ];
+
+    validSubjects.sort((a, b) => {
+      const idxA = CANONICAL_ORDER.indexOf(a.code);
+      const idxB = CANONICAL_ORDER.indexOf(b.code);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return validSubjects;
   } catch (err) {
     console.error('[Supabase fetchSubjects Exception]', err);
     return FALLBACK_SUBJECTS;

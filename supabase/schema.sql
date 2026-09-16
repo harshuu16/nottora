@@ -402,44 +402,44 @@ BEGIN
     RETURNING id INTO v_semester_id;
 
     -- 10.4 The 8 Core Subjects (Academic structure only, zero fake materials)
-    -- 1. Engineering Mathematics
+    -- 1. Communication Skills
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY2-01', 'Engineering Mathematics', 'engineering-mathematics', 4, 'BookOpen', 'Calculus, Matrices, Linear Algebra, and Differential Equations.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY507', 'Communication Skills', 'communication-skills', 2, 'MessagesSquare', 'Technical Writing, Business Correspondence, Phonetics & Presentation.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 2. Programming in C
+    -- 2. Chemistry
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY3-06', 'Programming in C', 'programming-in-c', 3, 'Code2', 'Structured programming, pointers, memory management, and data structures in C.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY101', 'Chemistry', 'chemistry', 4, 'Beaker', 'Water Technology, Fuels, Polymers, Corrosion & Nanomaterials.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 3. Engineering Physics
+    -- 3. BEEE
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY2-02', 'Engineering Physics', 'engineering-physics', 4, 'Atom', 'Quantum mechanics, wave optics, lasers, and optical fibers.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261CR104', 'BEEE', 'beee', 3, 'Zap', 'Basic Electrical & Electronics Engineering — DC/AC Circuits, Transformers & Diodes.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 4. Communication Skills
+    -- 4. Mathematics
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY1-05', 'Communication Skills', 'communication-skills', 2, 'MessageSquare', 'Technical writing, professional correspondence, and oral presentation.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY103', 'Mathematics', 'mathematics', 4, 'Calculator', 'Calculus, Matrices, Vector Calculus & Differential Equations.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 5. Chemistry
+    -- 5. MPWS
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY2-03', 'Chemistry', 'chemistry', 4, 'FlaskConical', 'Water technology, fuels, lubricants, polymers, and corrosion.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY629', 'MPWS', 'mpws', 2, 'Wrench', 'Manufacturing Practices Workshop — Fitting, Carpentry, Foundry & Welding.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 6. NSP (Natural Science Principles)
+    -- 6. C Programming
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY3-08', 'NSP', 'nsp', 2, 'Globe2', 'Natural science fundamentals and environmental engineering.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY106', 'C Programming', 'c-programming', 3, 'Code2', 'Syntax, Control Flow, Functions, Pointers, Arrays & File Handling.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 7. MPWS (Manufacturing Practice Workshop)
+    -- 7. Language Lab
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY4-21', 'MPWS', 'mpws', 2, 'Wrench', 'Manufacturing processes, welding, fitting, and shop floor practices.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261FY526', 'Language Lab', 'language-lab', 2, 'Languages', 'Phonetics, Listening Comprehension, Accent Training & Conversational Practice.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
-    -- 8. BEEE (Basic Electrical & Electronics Engineering)
+    -- 8. WPL
     INSERT INTO public.subjects (semester_id, code, name, slug, credits, icon_name, description)
-    VALUES (v_semester_id, '1FY3-07', 'BEEE', 'beee', 4, 'Zap', 'DC/AC circuits, magnetic circuits, transformers, and semiconductor diodes.')
-    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name;
+    VALUES (v_semester_id, '261CR124', 'WPL', 'wpl', 2, 'Globe', 'Web Programming Lab — HTML5, CSS3, JavaScript Basics, Responsive Design & DOM.')
+    ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
 END $$;

@@ -9,7 +9,9 @@ import {
   Wrench, 
   Zap, 
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Languages,
+  Globe
 } from 'lucide-react';
 import { Subject } from '../types';
 
@@ -27,6 +29,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Binary,
   Wrench,
   Zap,
+  Languages,
+  Globe,
 };
 
 export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) => {

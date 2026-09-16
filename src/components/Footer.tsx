@@ -108,48 +108,12 @@ export const Footer: React.FC<FooterProps> = ({
                 <li>
                   <button
                     type="button"
-                    onClick={() => onSelectSubject('engineering-mathematics')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
-                  >
-                    Engineering Mathematics
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('programming-in-c')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
-                  >
-                    Programming in C
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('engineering-physics')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
-                  >
-                    Engineering Physics
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
                     onClick={() => onSelectSubject('communication-skills')}
                     className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
                   >
                     Communication Skills
                   </button>
                 </li>
-              </ul>
-            </div>
-
-            {/* Semester 1 Subjects Column 2 */}
-            <div className="space-y-3">
-              <div className="font-bold text-[#1C1917] uppercase tracking-wider text-[11px]">
-                Applied Courses
-              </div>
-              <ul className="space-y-2">
                 <li>
                   <button
                     type="button"
@@ -162,12 +126,30 @@ export const Footer: React.FC<FooterProps> = ({
                 <li>
                   <button
                     type="button"
-                    onClick={() => onSelectSubject('nsp')}
+                    onClick={() => onSelectSubject('beee')}
                     className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
                   >
-                    NSP
+                    BEEE
                   </button>
                 </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSubject('mathematics')}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  >
+                    Mathematics
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Semester 1 Subjects Column 2 */}
+            <div className="space-y-3">
+              <div className="font-bold text-[#1C1917] uppercase tracking-wider text-[11px]">
+                Applied & Lab Courses
+              </div>
+              <ul className="space-y-2">
                 <li>
                   <button
                     type="button"
@@ -180,10 +162,28 @@ export const Footer: React.FC<FooterProps> = ({
                 <li>
                   <button
                     type="button"
-                    onClick={() => onSelectSubject('beee')}
+                    onClick={() => onSelectSubject('c-programming')}
                     className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
                   >
-                    BEEE
+                    C Programming
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSubject('language-lab')}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  >
+                    Language Lab
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSubject('wpl')}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  >
+                    WPL
                   </button>
                 </li>
               </ul>
