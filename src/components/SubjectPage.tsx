@@ -20,6 +20,7 @@ interface SubjectPageProps {
   subject: Subject;
   materials: Material[];
   onBack: () => void;
+  onNavigateHome?: () => void;
   onOpenMaterial: (material: Material) => void;
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
@@ -32,6 +33,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   subject,
   materials,
   onBack,
+  onNavigateHome,
   onOpenMaterial,
   onDownloadMaterial,
   bookmarkedIds,
@@ -106,25 +108,65 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
 
   return (
     <div className="pb-16 animate-in fade-in duration-200">
-      {/* Back Navigation Bar */}
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <button
-          id="back-to-subjects-btn"
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to All Subjects</span>
-        </button>
-
-        <div className="flex items-center gap-2 text-xs text-[#78716C]">
-          <span className="font-mono bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E6E1D6]">
-            {subject.code}
-          </span>
-          <span>·</span>
-          <span>Semester {subject.semester}</span>
+      {/* Hierarchical Back Navigation Bar & Breadcrumbs */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          {selectedCategory !== 'all' ? (
+            <button
+              id="back-to-subject-overview-btn"
+              type="button"
+              onClick={() => handleCategoryClick('all')}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to {subject.code} Overview</span>
+            </button>
+          ) : (
+            <button
+              id="back-to-subjects-btn"
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to All Subjects</span>
+            </button>
+          )}
         </div>
+
+        {/* Dynamic Breadcrumbs Hierarchy */}
+        <nav aria-label="Breadcrumbs" className="flex items-center gap-1.5 text-xs text-[#78716C]">
+          <button
+            type="button"
+            onClick={onNavigateHome || onBack}
+            className="hover:text-[#C2410C] transition-colors cursor-pointer font-medium"
+          >
+            Subjects
+          </button>
+          <span className="text-[#A8A29E]">/</span>
+          {selectedCategory !== 'all' ? (
+            <button
+              type="button"
+              onClick={() => handleCategoryClick('all')}
+              className="hover:text-[#C2410C] font-mono transition-colors cursor-pointer"
+            >
+              {subject.code}
+            </button>
+          ) : (
+            <span className="font-mono font-semibold text-[#1C1917] bg-[#F5F2EB] px-1.5 py-0.5 rounded border border-[#E6E1D6]">
+              {subject.code}
+            </span>
+          )}
+          {selectedCategory !== 'all' && (
+            <>
+              <span className="text-[#A8A29E]">/</span>
+              <span className="font-semibold text-[#C2410C] bg-[#FFF7ED] px-1.5 py-0.5 rounded border border-[#FED7AA]">
+                {categoryTabs.find((t) => t.id === selectedCategory)?.label || selectedCategory}
+              </span>
+            </>
+          )}
+          <span className="ml-1 text-[#A8A29E]">· Sem {subject.semester}</span>
+        </nav>
       </div>
 
       {/* Subject Hero Header */}

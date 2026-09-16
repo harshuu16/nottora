@@ -635,6 +635,7 @@ export default function App() {
             subject={currentSubjectObj}
             materials={materials}
             onBack={handleBackFromSubject}
+            onNavigateHome={handleNavigateHome}
             onOpenMaterial={handleOpenMaterial}
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
