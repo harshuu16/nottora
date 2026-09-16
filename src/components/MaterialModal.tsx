@@ -10,9 +10,10 @@ import {
   Sparkles, 
   Clock, 
   GraduationCap,
-  Copy,
+  Copy, 
   Check,
-  ExternalLink
+  ExternalLink,
+  ArrowLeft
 } from 'lucide-react';
 import { Material } from '../types';
 import { getMaterialSignedUrl } from '../lib/supabase';
@@ -24,6 +25,9 @@ interface MaterialModalProps {
   onDownload: (material: Material) => void;
   isBookmarked: boolean;
   onToggleBookmark: (id: string) => void;
+  isPdfViewerOpen?: boolean;
+  onOpenPdfViewer?: (material: Material) => void;
+  onClosePdfViewer?: () => void;
 }
 
 export const MaterialModal: React.FC<MaterialModalProps> = ({
@@ -32,23 +36,46 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
   onDownload,
   isBookmarked,
   onToggleBookmark,
+  isPdfViewerOpen = false,
+  onOpenPdfViewer,
+  onClosePdfViewer,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!material) {
+      setSignedUrl(null);
+      return;
+    }
+    const targetPath = material.filePath || material.fileUrl;
+    if (targetPath) {
+      getMaterialSignedUrl(targetPath, 3600)
+        .then((url) => setSignedUrl(url))
+        .catch(() => setSignedUrl(material.fileUrl));
+    } else {
+      setSignedUrl(material.fileUrl);
+    }
+  }, [material]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (isPdfViewerOpen && onClosePdfViewer) {
+          onClosePdfViewer();
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, isPdfViewerOpen, onClosePdfViewer]);
 
   if (!material) return null;
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/#material-${material.id}`;
+    const url = `${window.location.origin}/material/${material.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -57,6 +84,103 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  // When full-screen / in-app PDF document viewer mode is active
+  if (isPdfViewerOpen) {
+    return (
+      <div
+        id="pdf-viewer-backdrop"
+        className="fixed inset-0 z-50 bg-[#1C1917]/85 backdrop-blur-md flex flex-col p-2 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+      >
+        <div
+          id="pdf-viewer-container"
+          className="bg-[#FFFFFF] w-full max-w-6xl mx-auto rounded-2xl border border-[#E5E0D5] shadow-2xl overflow-hidden flex flex-col flex-1 max-h-[96vh] animate-in zoom-in-95 duration-150"
+        >
+          {/* PDF Viewer Top Bar */}
+          <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-[#EAE5DA] bg-[#FAF8F5] flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                id="pdf-viewer-back-btn"
+                type="button"
+                onClick={onClosePdfViewer || onClose}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#FFFFFF] text-[#44403C] hover:text-[#1C1917] border border-[#D7D0C5] hover:bg-[#F5F1E8] transition-colors cursor-pointer shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4 text-[#C2410C]" />
+                <span className="hidden sm:inline">Back to Details</span>
+                <span className="sm:hidden">Back</span>
+              </button>
+
+              <div className="min-w-0 truncate">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA] shrink-0">
+                    {material.fileType.toUpperCase()}
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-[#1C1917] truncate block">
+                    {material.title}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {signedUrl && (
+                <a
+                  id="pdf-viewer-new-tab-btn"
+                  href={signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#57534E] hover:text-[#1C1917] hover:bg-[#EAE5DA] transition-colors inline-flex items-center gap-1.5"
+                  title="Open PDF in new browser tab"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Open in Tab</span>
+                </a>
+              )}
+
+              <button
+                id="pdf-viewer-download-btn"
+                type="button"
+                onClick={() => onDownload(material)}
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-[#C2410C] hover:bg-[#9A3412] active:bg-[#7C2D12] rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Download</span>
+              </button>
+
+              <button
+                id="pdf-viewer-close-btn"
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE5DA] transition-colors"
+                aria-label="Close document viewer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Embedded PDF iframe / Reader Frame */}
+          <div className="flex-1 bg-[#323639] relative flex flex-col items-center justify-center min-h-[400px]">
+            {signedUrl ? (
+              <iframe
+                src={signedUrl}
+                title={material.title}
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <div className="text-center p-8 text-[#FAF8F5]">
+                <FileText className="w-12 h-12 mx-auto text-[#FED7AA] mb-3 opacity-80" />
+                <p className="text-sm font-medium mb-2">Preparing {material.title}...</p>
+                <p className="text-xs text-[#A8A29E] max-w-sm mx-auto">
+                  Connecting to secure document storage. If your browser restricts inline rendering, use the buttons above to open or download.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -234,19 +358,41 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
             </button>
 
             {material.fileUrl && (
-              <button
-                id="modal-open-pdf-btn"
-                type="button"
-                onClick={async () => {
-                  const targetPath = material.filePath || material.fileUrl;
-                  const signedUrl = await getMaterialSignedUrl(targetPath, 3600);
-                  window.open(signedUrl, '_blank', 'noopener,noreferrer');
-                }}
-                className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1C1917] bg-[#FFFFFF] border border-[#E0D9CC] hover:bg-[#F5F2EB] rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <ExternalLink className="w-3.5 h-3.5 text-[#C2410C]" />
-                <span>Open {material.fileType.toUpperCase()}</span>
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  id="modal-open-pdf-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onOpenPdfViewer) {
+                      onOpenPdfViewer(material);
+                    } else if (signedUrl) {
+                      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+                    } else {
+                      const targetPath = material.filePath || material.fileUrl;
+                      getMaterialSignedUrl(targetPath, 3600).then((url) => {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      });
+                    }
+                  }}
+                  className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1C1917] bg-[#FFFFFF] border border-[#E0D9CC] hover:bg-[#F5F2EB] rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-[#C2410C]" />
+                  <span>Open {material.fileType.toUpperCase()}</span>
+                </button>
+
+                {signedUrl && (
+                  <a
+                    id="modal-open-tab-link"
+                    href={signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-xs font-medium text-[#78716C] hover:text-[#1C1917] hover:bg-[#F2EFE9] rounded-xl border border-[#E0D9CC] transition-colors"
+                    title="Open in new browser tab"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
             )}
 
             <button

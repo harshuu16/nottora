@@ -6,11 +6,24 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+html {
+  font-family: var(--font-sans);
+  background-color: #FBF9F5;
+  color: #1C1917;
+  /* Ensure native browser edge-swipe Back/Forward gestures are preserved */
+  overscroll-behavior-x: auto;
+  touch-action: pan-y pan-x pinch-zoom;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: #FBF9F5;
   color: #1C1917;
-  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  /* Guarantee that native edge-swipe Back/Forward browser gestures remain completely active */
+  overscroll-behavior-x: auto;
+  touch-action: pan-y pan-x pinch-zoom;
 }
 
 .font-editorial {

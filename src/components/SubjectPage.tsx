@@ -24,7 +24,8 @@ interface SubjectPageProps {
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
-  initialCategory?: MaterialCategory;
+  initialCategory?: MaterialCategory | 'all';
+  onSelectCategory?: (category: MaterialCategory | 'all') => void;
 }
 
 export const SubjectPage: React.FC<SubjectPageProps> = ({
@@ -36,6 +37,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   bookmarkedIds,
   onToggleBookmark,
   initialCategory,
+  onSelectCategory,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<MaterialCategory | 'all'>(
     initialCategory || 'all'
@@ -44,6 +46,18 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   const [viewMode, setViewMode] = useState<'by-unit' | 'flat'>('by-unit');
   const [collapsedUnits, setCollapsedUnits] = useState<Record<number, boolean>>({});
   const [studiedUnits, setStudiedUnits] = useState<Record<number, boolean>>({});
+
+  // Synchronize category with initialCategory whenever browser Back/Forward (popstate) or parent route changes
+  React.useEffect(() => {
+    setSelectedCategory(initialCategory || 'all');
+  }, [initialCategory]);
+
+  const handleCategoryClick = (category: MaterialCategory | 'all') => {
+    setSelectedCategory(category);
+    if (onSelectCategory && category !== selectedCategory) {
+      onSelectCategory(category);
+    }
+  };
 
   // Filter materials for this subject based on category and search query
   const filteredMaterials = useMemo(() => {
@@ -190,7 +204,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                 key={tab.id}
                 id={`cat-tab-${tab.id}`}
                 type="button"
-                onClick={() => setSelectedCategory(tab.id)}
+                onClick={() => handleCategoryClick(tab.id)}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   isSelected
                     ? 'bg-[#1C1917] text-[#FFFFFF] shadow-sm'

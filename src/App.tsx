@@ -31,33 +31,15 @@ import { AcademicContextModal } from './components/AcademicContextModal';
 import { AdminPortalModal } from './components/AdminPortalModal';
 import { Footer } from './components/Footer';
 import { ToastContainer, ToastMessage } from './components/Toast';
-
-/**
- * Helper to check if current window URL represents the hidden admin route
- * Supports:
- *  - Path: /admin, /admin/
- *  - Path: /admin/login, /admin/login/
- *  - Hash: #admin, #/admin
- *  - Query: ?admin=true
- */
-function checkIsAdminRoute(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '');
-    const hash = window.location.hash.toLowerCase().replace(/\/+$/, '');
-    const searchParams = new URLSearchParams(window.location.search);
-
-    return (
-      rawPath === '/admin' ||
-      rawPath === '/admin/login' ||
-      hash === '#admin' ||
-      hash === '#/admin' ||
-      searchParams.get('admin') === 'true'
-    );
-  } catch {
-    return false;
-  }
-}
+import { 
+  AppRouteState,
+  parseUrlToRouteState, 
+  buildUrlFromRouteState, 
+  pushRoute, 
+  replaceRoute, 
+  safeGoBack,
+  findSubjectByIdentifier
+} from './lib/router';
 
 export default function App() {
   // Academic hierarchy context
@@ -68,22 +50,23 @@ export default function App() {
   const [materials, setMaterials] = useState<Material[]>(DEFAULT_MATERIALS);
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(false);
 
-  // Navigation View Mode
+  // Navigation View Mode (synced with browser URL and history stack)
   const [view, setView] = useState<ViewMode>({ type: 'home' });
 
   // Search state in Hero
   const [heroSearchQuery, setHeroSearchQuery] = useState('');
   const [selectedHeroCategory, setSelectedHeroCategory] = useState<MaterialCategory | 'all'>('all');
 
-  // Modals & Drawers state
+  // Modals & Drawers state (synced with browser history)
   const [activeMaterial, setActiveMaterial] = useState<Material | null>(null);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchModalInitialQuery, setSearchModalInitialQuery] = useState('');
   const [isBookmarksDrawerOpen, setIsBookmarksDrawerOpen] = useState(false);
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
 
-  // Protected Admin Portal state (accessible via hidden /admin route, #admin, ?admin=true, or shortcut)
-  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState(() => checkIsAdminRoute());
+  // Protected Admin Portal state (accessible via /admin, #admin, ?admin=true, or shortcut)
+  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState(false);
 
   // Bookmarked materials (saved in localStorage if available)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(() => {
@@ -143,21 +126,71 @@ export default function App() {
     }
   }, [bookmarkedIds]);
 
-  // Listen to navigation events (popstate, hashchange) for hidden /admin route, #admin, etc.
+  // Computed subjects with unified, live material counts matching SubjectPage exactly
+  const enrichedSubjects = useMemo(() => {
+    return subjects.map((sub) => ({
+      ...sub,
+      totalMaterials: materials.filter((m) => materialBelongsToSubject(m, sub)).length,
+    }));
+  }, [subjects, materials]);
+
+  // Synchronize component state with browser history / URL
+  const syncStateFromLocation = useCallback((isInitial = false) => {
+    const route = parseUrlToRouteState(enrichedSubjects, materials);
+    setView(route.view);
+
+    if (route.materialId) {
+      const mat = materials.find((m) => m.id === route.materialId) || 
+                  DEFAULT_MATERIALS.find((m) => m.id === route.materialId);
+      setActiveMaterial(mat || null);
+    } else {
+      setActiveMaterial(null);
+    }
+
+    setIsPdfViewerOpen(route.isPdfViewerOpen);
+    setIsSearchModalOpen(route.isSearchOpen);
+    setIsAdminPortalOpen(route.isAdminOpen);
+
+    if (isInitial) {
+      const canonicalUrl = buildUrlFromRouteState(route, enrichedSubjects);
+      replaceRoute(route, canonicalUrl);
+    }
+  }, [enrichedSubjects, materials]);
+
+  // Listen to browser popstate (Back/Forward buttons, native edge-swipe on mobile, touchpad swipe on laptop)
   useEffect(() => {
-    const handleRouteSync = () => {
-      if (checkIsAdminRoute()) {
-        setIsAdminPortalOpen(true);
-      }
+    const handlePopState = () => {
+      syncStateFromLocation(false);
     };
-    window.addEventListener('popstate', handleRouteSync);
-    window.addEventListener('hashchange', handleRouteSync);
-    handleRouteSync();
+    const handleHashChange = () => {
+      syncStateFromLocation(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
     return () => {
-      window.removeEventListener('popstate', handleRouteSync);
-      window.removeEventListener('hashchange', handleRouteSync);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
     };
-  }, []);
+  }, [syncStateFromLocation]);
+
+  // Initial sync on mount
+  useEffect(() => {
+    syncStateFromLocation(true);
+  }, [syncStateFromLocation]);
+
+  // When materials change (e.g. loaded from Supabase), ensure activeMaterial resolves if in route
+  useEffect(() => {
+    if (materials.length > 0) {
+      const route = parseUrlToRouteState(enrichedSubjects, materials);
+      if (route.materialId && (!activeMaterial || activeMaterial.id !== route.materialId)) {
+        const mat = materials.find((m) => m.id === route.materialId);
+        if (mat) {
+          setActiveMaterial(mat);
+        }
+      }
+    }
+  }, [materials, enrichedSubjects, activeMaterial]);
 
   // Global Keyboard Shortcuts (⌘K or Ctrl+K for search; Ctrl+Shift+A or Cmd+Shift+A / Ctrl+Alt+A for Admin Portal)
   useEffect(() => {
@@ -173,13 +206,14 @@ export default function App() {
       if ((isCtrlOrMeta && isShift && isKeyA) || (isCtrlOrMeta && isAlt && isKeyA) || (isAlt && isShift && isKeyA)) {
         e.preventDefault();
         setIsAdminPortalOpen(true);
-        try {
-          if (window.location.pathname.toLowerCase() !== '/admin') {
-            window.history.replaceState(null, '', '/admin');
-          }
-        } catch {
-          // ignore
-        }
+        pushRoute({
+          view,
+          materialId: activeMaterial?.id || null,
+          isPdfViewerOpen,
+          isSearchOpen: false,
+          isAdminOpen: true,
+          internalStep: (window.history.state?.internalStep || 0) + 1,
+        }, '/admin');
       } else if (isCtrlOrMeta && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchModalOpen(true);
@@ -190,7 +224,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [view, activeMaterial, isPdfViewerOpen]);
 
   const addToast = useCallback((type: ToastMessage['type'], title: string, message: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
@@ -271,9 +305,22 @@ export default function App() {
     return materials.filter((m) => bookmarkedIds.has(m.id));
   }, [materials, bookmarkedIds]);
 
-  // Navigation handlers
+  // Navigation handlers with standard browser History stack integration
   const handleNavigateHome = () => {
+    const nextRoute: AppRouteState = {
+      view: { type: 'home' },
+      materialId: null,
+      isPdfViewerOpen: false,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
     setView({ type: 'home' });
+    setActiveMaterial(null);
+    setIsPdfViewerOpen(false);
+    setIsSearchModalOpen(false);
+    setIsAdminPortalOpen(false);
+    pushRoute(nextRoute, '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -285,43 +332,186 @@ export default function App() {
         return;
       }
     }
-    setView({ type: 'home' });
+    handleNavigateHome();
     setTimeout(() => {
       const el = document.getElementById('subjects-section');
       el?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
-  // Computed subjects with unified, live material counts matching SubjectPage exactly
-  const enrichedSubjects = useMemo(() => {
-    return subjects.map((sub) => ({
-      ...sub,
-      totalMaterials: materials.filter((m) => materialBelongsToSubject(m, sub)).length,
-    }));
-  }, [subjects, materials]);
+  const handleSelectSubject = (subjectId: string, initialCategory?: MaterialCategory | 'all') => {
+    const matched = findSubjectByIdentifier(subjectId, enrichedSubjects);
+    const resolvedId = matched ? matched.id : subjectId;
+    const cat = initialCategory && initialCategory !== 'all' ? initialCategory : undefined;
 
-  const handleSelectSubject = (subjectId: string, initialCategory?: MaterialCategory) => {
-    const resolvedCode = resolveSubjectIdentifier(subjectId);
-    const matched = enrichedSubjects.find(
-      (s) => (resolvedCode && (s.code === resolvedCode || s.id === resolvedCode)) ||
-             s.id === subjectId || 
-             s.slug === subjectId || 
-             s.code.toLowerCase() === subjectId.toLowerCase() ||
-             (s.uuid && s.uuid === subjectId)
-    );
-    const resolvedId = matched ? matched.id : (resolvedCode || subjectId);
-    setView({ type: 'subject', subjectId: resolvedId, initialCategory });
+    const nextView: ViewMode = {
+      type: 'subject',
+      subjectId: resolvedId,
+      initialCategory: cat,
+    };
+
+    setView(nextView);
+    setActiveMaterial(null);
+    setIsPdfViewerOpen(false);
+
+    const nextRoute: AppRouteState = {
+      view: nextView,
+      materialId: null,
+      isPdfViewerOpen: false,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleSubjectCategoryChange = (category: MaterialCategory | 'all') => {
+    if (view.type !== 'subject') return;
+    const cat = category !== 'all' ? category : undefined;
+    const nextView: ViewMode = {
+      type: 'subject',
+      subjectId: view.subjectId,
+      initialCategory: cat,
+    };
+    setView(nextView);
+
+    const nextRoute: AppRouteState = {
+      view: nextView,
+      materialId: null,
+      isPdfViewerOpen: false,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
+  };
+
   const handleSelectCategory = (category: MaterialCategory) => {
-    setView({ type: 'category', category });
+    const nextView: ViewMode = { type: 'category', category };
+    setView(nextView);
+    setActiveMaterial(null);
+    setIsPdfViewerOpen(false);
+
+    const nextRoute: AppRouteState = {
+      view: nextView,
+      materialId: null,
+      isPdfViewerOpen: false,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleHeroSearchSubmit = (query: string) => {
     setSearchModalInitialQuery(query);
     setIsSearchModalOpen(true);
+  };
+
+  const handleOpenMaterial = (material: Material) => {
+    setActiveMaterial(material);
+    setIsPdfViewerOpen(false);
+
+    let currentView = view;
+    // If opened from home or search without an active subject, attach subject context if available
+    if (currentView.type === 'home') {
+      const sub = enrichedSubjects.find((s) => materialBelongsToSubject(material, s));
+      if (sub) {
+        currentView = {
+          type: 'subject',
+          subjectId: sub.id,
+          initialCategory: material.category,
+        };
+        setView(currentView);
+      }
+    }
+
+    const nextRoute: AppRouteState = {
+      view: currentView,
+      materialId: material.id,
+      isPdfViewerOpen: false,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
+  };
+
+  const handleCloseMaterial = () => {
+    if (isPdfViewerOpen) {
+      handleClosePdfViewer();
+      return;
+    }
+    if (activeMaterial) {
+      const currentStep = window.history.state?.internalStep || 0;
+      if (currentStep > 0) {
+        window.history.back();
+      } else {
+        setActiveMaterial(null);
+        const nextRoute: AppRouteState = {
+          view,
+          materialId: null,
+          isPdfViewerOpen: false,
+          isSearchOpen: false,
+          isAdminOpen: false,
+          internalStep: 0,
+        };
+        replaceRoute(nextRoute, buildUrlFromRouteState(nextRoute, enrichedSubjects));
+      }
+    }
+  };
+
+  const handleOpenPdfViewer = (material: Material) => {
+    setIsPdfViewerOpen(true);
+    const nextRoute: AppRouteState = {
+      view,
+      materialId: material.id,
+      isPdfViewerOpen: true,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
+  };
+
+  const handleClosePdfViewer = () => {
+    const currentStep = window.history.state?.internalStep || 0;
+    if (currentStep > 0) {
+      window.history.back();
+    } else {
+      setIsPdfViewerOpen(false);
+      if (activeMaterial) {
+        const nextRoute: AppRouteState = {
+          view,
+          materialId: activeMaterial.id,
+          isPdfViewerOpen: false,
+          isSearchOpen: false,
+          isAdminOpen: false,
+          internalStep: 0,
+        };
+        replaceRoute(nextRoute, buildUrlFromRouteState(nextRoute, enrichedSubjects));
+      }
+    }
+  };
+
+  const handleBackFromSubject = () => {
+    safeGoBack('/');
+  };
+
+  const handleBackFromCategory = () => {
+    safeGoBack('/');
+  };
+
+  const handleCloseAdminPortal = () => {
+    setIsAdminPortalOpen(false);
+    safeGoBack('/');
   };
 
   const currentSubjectObj = useMemo(() => {
@@ -395,7 +585,7 @@ export default function App() {
                       <MaterialCard
                         key={mat.id}
                         material={mat}
-                        onOpen={setActiveMaterial}
+                        onOpen={handleOpenMaterial}
                         onDownload={handleDownload}
                         isBookmarked={bookmarkedIds.has(mat.id)}
                         onToggleBookmark={handleToggleBookmark}
@@ -428,7 +618,7 @@ export default function App() {
             {/* Recent Materials Section */}
             <RecentMaterials
               materials={materials}
-              onOpenMaterial={setActiveMaterial}
+              onOpenMaterial={handleOpenMaterial}
               onDownloadMaterial={handleDownload}
               bookmarkedIds={bookmarkedIds}
               onToggleBookmark={handleToggleBookmark}
@@ -444,12 +634,13 @@ export default function App() {
           <SubjectPage
             subject={currentSubjectObj}
             materials={materials}
-            onBack={handleNavigateHome}
-            onOpenMaterial={setActiveMaterial}
+            onBack={handleBackFromSubject}
+            onOpenMaterial={handleOpenMaterial}
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
             initialCategory={view.initialCategory}
+            onSelectCategory={handleSubjectCategoryChange}
           />
         )}
 
@@ -458,8 +649,8 @@ export default function App() {
             category={view.category}
             subjects={enrichedSubjects}
             materials={materials}
-            onBack={handleNavigateHome}
-            onOpenMaterial={setActiveMaterial}
+            onBack={handleBackFromCategory}
+            onOpenMaterial={handleOpenMaterial}
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
@@ -478,10 +669,13 @@ export default function App() {
       {/* Reader / Document Detail Preview Modal */}
       <MaterialModal
         material={activeMaterial}
-        onClose={() => setActiveMaterial(null)}
+        onClose={handleCloseMaterial}
         onDownload={handleDownload}
         isBookmarked={activeMaterial ? bookmarkedIds.has(activeMaterial.id) : false}
         onToggleBookmark={handleToggleBookmark}
+        isPdfViewerOpen={isPdfViewerOpen}
+        onOpenPdfViewer={handleOpenPdfViewer}
+        onClosePdfViewer={handleClosePdfViewer}
       />
 
       {/* Global Search Modal */}
@@ -490,7 +684,7 @@ export default function App() {
         onClose={() => setIsSearchModalOpen(false)}
         subjects={enrichedSubjects}
         materials={materials}
-        onOpenMaterial={setActiveMaterial}
+        onOpenMaterial={handleOpenMaterial}
         onSelectSubject={(id) => handleSelectSubject(id)}
         initialQuery={searchModalInitialQuery}
       />
@@ -500,7 +694,7 @@ export default function App() {
         isOpen={isBookmarksDrawerOpen}
         onClose={() => setIsBookmarksDrawerOpen(false)}
         bookmarkedMaterials={bookmarkedMaterialsList}
-        onOpenMaterial={setActiveMaterial}
+        onOpenMaterial={handleOpenMaterial}
         onDownloadMaterial={handleDownload}
         onRemoveBookmark={handleToggleBookmark}
         onClearAll={() => setBookmarkedIds(new Set())}
@@ -520,21 +714,7 @@ export default function App() {
       {/* Protected Admin Portal Modal (Triggered via /admin, #admin, ?admin=true, or shortcut) */}
       <AdminPortalModal
         isOpen={isAdminPortalOpen}
-        onClose={() => {
-          setIsAdminPortalOpen(false);
-          try {
-            const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '');
-            const isSpecialPath = rawPath === '/admin' || rawPath === '/admin/login';
-            const isSpecialHash = window.location.hash === '#admin' || window.location.hash === '#/admin';
-            const isSpecialSearch = new URLSearchParams(window.location.search).get('admin') === 'true';
-
-            if (isSpecialPath || isSpecialHash || isSpecialSearch) {
-              window.history.replaceState(null, '', '/');
-            }
-          } catch {
-            // ignore
-          }
-        }}
+        onClose={handleCloseAdminPortal}
         subjects={enrichedSubjects}
         onMaterialsUpdated={refreshAcademicData}
       />
