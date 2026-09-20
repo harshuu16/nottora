@@ -110,9 +110,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     const words = q.split(/\s+/).filter(Boolean);
     return subjects.filter((s) => {
       const name = s.name.toLowerCase();
-      const code = s.code.toLowerCase();
+      const code = (s.code || '').toLowerCase();
+      const short = (s.shortName || '').toLowerCase();
       const desc = s.shortDescription.toLowerCase();
-      return words.every((w) => name.includes(w) || code.includes(w) || desc.includes(w));
+      return words.every((w) => name.includes(w) || (code && code.includes(w)) || (short && short.includes(w)) || desc.includes(w));
     });
   }, [query, subjects]);
 
@@ -352,9 +353,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       >
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[#EFEBE3] text-[#57534E]">
-                              {sub.code}
-                            </span>
+                            {sub.code ? (
+                              <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[#EFEBE3] text-[#57534E]">
+                                {sub.code}
+                              </span>
+                            ) : sub.shortName ? (
+                              <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[#EFEBE3] text-[#57534E]">
+                                {sub.shortName}
+                              </span>
+                            ) : null}
                             <span className="text-xs font-bold text-[#1C1917] group-hover:text-[#C2410C]">
                               {sub.name}
                             </span>

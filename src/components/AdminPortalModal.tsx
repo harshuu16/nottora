@@ -214,6 +214,7 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
         slug: s.slug || s.id,
         name: s.name,
         code: s.code,
+        shortName: s.shortName,
       };
     });
   }, [dbSubjects, subjects]);
@@ -827,7 +828,7 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
                         >
                           {availableSubjectOptions.map((s) => (
                             <option key={s.uuid} value={s.uuid}>
-                              {s.name} ({s.code})
+                              {s.name} {s.code ? `(${s.code})` : s.shortName ? `(${s.shortName})` : ''}
                             </option>
                           ))}
                         </select>

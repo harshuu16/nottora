@@ -119,7 +119,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
               className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to {subject.code} Overview</span>
+              <span>Back to {subject.code || subject.shortName || subject.name} Overview</span>
             </button>
           ) : (
             <button
@@ -150,11 +150,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
               onClick={() => handleCategoryClick('all')}
               className="hover:text-[#C2410C] font-mono transition-colors cursor-pointer"
             >
-              {subject.code}
+              {subject.code || subject.shortName || subject.name}
             </button>
           ) : (
             <span className="font-mono font-semibold text-[#1C1917] bg-[#F5F2EB] px-1.5 py-0.5 rounded border border-[#E6E1D6]">
-              {subject.code}
+              {subject.code || subject.shortName || subject.name}
             </span>
           )}
           {selectedCategory !== 'all' && (
@@ -174,9 +174,15 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]">
-                {subject.code}
-              </span>
+              {subject.code ? (
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]">
+                  {subject.code}
+                </span>
+              ) : subject.shortName ? (
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]">
+                  {subject.shortName}
+                </span>
+              ) : null}
               <span className="text-xs text-[#78716C] bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E5E0D5]">
                 {subject.credits} Credits Course
               </span>
@@ -289,7 +295,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
       </div>
 
       {/* Main Material Display Area */}
-      {filteredMaterials.length === 0 ? (
+      {filteredMaterials.length === 0 && (subjectSearch || selectedCategory !== 'all') ? (
         <div className="p-12 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">
           <div className="w-12 h-12 rounded-full bg-[#FAF7F2] border border-[#E8E2D5] flex items-center justify-center text-[#A8A29E] mx-auto mb-3">
             <Search className="w-6 h-6" />
@@ -317,19 +323,33 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
         </div>
       ) : viewMode === 'flat' ? (
         // Flat list of materials
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMaterials.map((material) => (
-            <MaterialCard
-              key={material.id}
-              material={material}
-              onOpen={onOpenMaterial}
-              onDownload={onDownloadMaterial}
-              isBookmarked={bookmarkedIds.has(material.id)}
-              onToggleBookmark={onToggleBookmark}
-              showSubjectBadge={false}
-            />
-          ))}
-        </div>
+        filteredMaterials.length === 0 ? (
+          <div className="p-12 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">
+            <div className="w-12 h-12 rounded-full bg-[#FAF7F2] border border-[#E8E2D5] flex items-center justify-center text-[#A8A29E] mx-auto mb-3">
+              <Search className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-semibold text-[#1C1917] mb-1">
+              No materials cataloged yet
+            </h3>
+            <p className="text-xs text-[#78716C] max-w-sm mx-auto">
+              Materials for {subject.name} will appear here as soon as they are uploaded.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMaterials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onOpen={onOpenMaterial}
+                onDownload={onDownloadMaterial}
+                isBookmarked={bookmarkedIds.has(material.id)}
+                onToggleBookmark={onToggleBookmark}
+                showSubjectBadge={false}
+              />
+            ))}
+          </div>
+        )
       ) : (
         // Grouped by Unit hierarchy
         <div className="space-y-8">

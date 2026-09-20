@@ -41,7 +41,8 @@ export function findSubjectByIdentifier(
     (s) =>
       s.id.toLowerCase() === cleanId ||
       (s.slug && s.slug.toLowerCase() === cleanId) ||
-      s.code.toLowerCase() === cleanId ||
+      (s.code && s.code.toLowerCase() === cleanId) ||
+      (s.shortName && s.shortName.toLowerCase() === cleanId) ||
       (s.uuid && s.uuid.toLowerCase() === cleanId)
   );
   if (direct) return direct;
@@ -51,8 +52,9 @@ export function findSubjectByIdentifier(
   if (resolvedCode) {
     const matched = subjects.find(
       (s) =>
-        s.code.toLowerCase() === resolvedCode.toLowerCase() ||
-        s.id.toLowerCase() === resolvedCode.toLowerCase()
+        (s.code && s.code.toLowerCase() === resolvedCode.toLowerCase()) ||
+        s.id.toLowerCase() === resolvedCode.toLowerCase() ||
+        (s.slug && s.slug.toLowerCase() === resolvedCode.toLowerCase())
     );
     if (matched) return matched;
   }
@@ -61,7 +63,7 @@ export function findSubjectByIdentifier(
   const nameMatch = subjects.find(
     (s) =>
       s.name.toLowerCase().includes(cleanId) ||
-      cleanId.includes(s.code.toLowerCase())
+      (s.code && s.code.length > 0 && cleanId.includes(s.code.toLowerCase()))
   );
   return nameMatch || null;
 }

@@ -19,6 +19,7 @@ export interface Subject {
   id: string;
   slug?: string;
   code: string;
+  shortName?: string;
   uuid?: string;
   name: string;
   shortDescription: string;
@@ -123,6 +124,7 @@ export interface DbSubject {
   id: string;
   name: string;
   code: string;
+  short_name?: string | null;
   slug?: string | null;
   semester?: string | null;
   branch?: string | null;

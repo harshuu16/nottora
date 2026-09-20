@@ -385,8 +385,9 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
     ? dbSubject.year
     : (parseInt(String(dbSubject.year || '1').replace(/\D/g, ''), 10) || 1);
 
-  const finalCode = fallback?.code || resolvedCode || dbSubject.code;
+  const finalCode = fallback !== undefined && fallback !== null ? fallback.code : (dbSubject.code || '');
   const finalId = fallback?.id || resolvedCode || dbSubject.id;
+  const finalShortName = fallback?.shortName || dbSubject.short_name || (fallback?.name === 'Design Thinking' || dbSubject.name === 'Design Thinking' ? 'DT' : undefined);
   const finalUuid = isValidUuid(dbSubject.id)
     ? dbSubject.id
     : (fallback?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === finalCode)?.knownUuids?.[0]);
@@ -394,6 +395,7 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
   return {
     id: finalId,
     code: finalCode,
+    shortName: finalShortName,
     uuid: finalUuid,
     slug: fallback?.slug || dbSubject.slug || dbSubject.id,
     name: fallback?.name || dbSubject.name,
@@ -795,20 +797,22 @@ export async function fetchSubjects(): Promise<Subject[]> {
     });
 
     // Filter out obsolete Semester 1 subjects from older schemes that are not part of current Autonomous Semester 1
-    const sem1Codes = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.code));
+    const sem1Codes = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1 && s.code).map(s => s.code));
     const sem1Ids = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.id));
+    const sem1Slugs = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1 && s.slug).map(s => s.slug));
     const validSubjects = mappedList.filter(s => {
       if (s.semester === 1) {
-        return sem1Codes.has(s.code) || sem1Ids.has(s.id);
+        return (s.code && sem1Codes.has(s.code)) || sem1Ids.has(s.id) || (s.slug && sem1Slugs.has(s.slug));
       }
       return true;
     });
 
-    // Guarantee all 8 canonical Semester 1 subjects are available
+    // Guarantee all canonical Semester 1 subjects are available
     const existingIds = new Set(validSubjects.map(s => s.id));
-    const existingCodes = new Set(validSubjects.map(s => s.code));
+    const existingCodes = new Set(validSubjects.map(s => s.code).filter(Boolean));
+    const existingSlugs = new Set(validSubjects.map(s => s.slug).filter(Boolean));
     for (const fb of FALLBACK_SUBJECTS) {
-      if (!existingIds.has(fb.id) && !existingCodes.has(fb.code)) {
+      if (!existingIds.has(fb.id) && (!fb.code || !existingCodes.has(fb.code)) && (!fb.slug || !existingSlugs.has(fb.slug))) {
         validSubjects.push(fb);
       }
     }
@@ -822,21 +826,89 @@ export async function fetchSubjects(): Promise<Subject[]> {
       '261FY106', // C Programming
       '261FY526', // Language Lab
       '261CR124', // WPL
+      'design-thinking', // Design Thinking (9th subject)
     ];
 
+    const getCanonicalRank = (s: Subject) => {
+      if (s.code && CANONICAL_ORDER.includes(s.code)) {
+        return CANONICAL_ORDER.indexOf(s.code);
+      }
+      if (s.id && CANONICAL_ORDER.includes(s.id)) {
+        return CANONICAL_ORDER.indexOf(s.id);
+      }
+      if (s.slug && CANONICAL_ORDER.includes(s.slug)) {
+        return CANONICAL_ORDER.indexOf(s.slug);
+      }
+      return -1;
+    };
+
     validSubjects.sort((a, b) => {
-      const idxA = CANONICAL_ORDER.indexOf(a.code);
-      const idxB = CANONICAL_ORDER.indexOf(b.code);
+      const idxA = getCanonicalRank(a);
+      const idxB = getCanonicalRank(b);
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       if (idxA !== -1) return -1;
       if (idxB !== -1) return 1;
       return a.name.localeCompare(b.name);
     });
 
+    // Safely attempt sync in background if Supabase is connected
+    syncDesignThinkingSubject().catch(() => {});
+
     return validSubjects;
   } catch (err) {
     console.error('[Supabase fetchSubjects Exception]', err);
     return FALLBACK_SUBJECTS;
+  }
+}
+
+/**
+ * Ensures the "Design Thinking" subject entry exists in the Supabase database
+ * using the same database structure as the other Semester 1 subjects, without creating
+ * duplicates, without inserting fake materials, and leaving the code field empty
+ * so the user can easily update it later when official code is available.
+ */
+export async function syncDesignThinkingSubject(): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
+  try {
+    const { data: existing, error: checkError } = await client
+      .from('subjects')
+      .select('id, name, slug, code, semester_id')
+      .or('id.eq.design-thinking,slug.eq.design-thinking,name.ilike.Design Thinking')
+      .limit(1);
+
+    if (checkError || (existing && existing.length > 0)) {
+      return;
+    }
+
+    let semesterId: string | null = null;
+    try {
+      const { data: sems } = await client
+        .from('semesters')
+        .select('id')
+        .eq('semester_number', 1)
+        .limit(1);
+      if (sems && sems.length > 0) {
+        semesterId = sems[0].id;
+      }
+    } catch {
+      // ignore
+    }
+
+    await client
+      .from('subjects')
+      .insert([{
+        name: 'Design Thinking',
+        code: '', // Subject code left empty/unavailable for now
+        slug: 'design-thinking',
+        semester_id: semesterId,
+        description: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
+        credits: 2,
+        icon_name: 'Lightbulb',
+      }]);
+  } catch (err) {
+    // Graceful error handling (e.g., if unauthenticated or RLS blocks insert)
   }
 }
 

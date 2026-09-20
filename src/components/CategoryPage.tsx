@@ -24,7 +24,7 @@ const CATEGORY_META: Record<MaterialCategory, {
   notes: {
     title: 'Lecture Notes Archive',
     subtitle: 'Faculty handouts, unit-wise handwritten notes and structured summaries',
-    description: 'Directly access chapter notes for all 8 semester subjects. Organized strictly by syllabus unit.',
+    description: 'Directly access chapter notes for all semester subjects. Organized strictly by syllabus unit.',
     icon: BookOpen,
   },
   'important-questions': {

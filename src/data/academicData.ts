@@ -418,6 +418,73 @@ export const SUBJECTS: Subject[] = [
       },
     ],
   },
+  {
+    id: 'design-thinking',
+    slug: 'design-thinking',
+    code: '', // Subject code not available yet; leave empty
+    shortName: 'DT',
+    name: 'Design Thinking',
+    shortDescription: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
+    semester: 1,
+    year: 1,
+    branch: 'B.Tech CSE',
+    college: 'Poornima College of Engineering',
+    iconName: 'Lightbulb',
+    credits: 2,
+    totalMaterials: 0,
+    units: [
+      {
+        unitNumber: 1,
+        title: 'Introduction to Design Thinking & Human-Centered Design',
+        keyTopics: [
+          'Design Thinking Mindset & Principles',
+          'Human-Centered vs Traditional Engineering',
+          '5-Stage Stanford d.school Framework',
+          'Problem Space vs Solution Space'
+        ],
+      },
+      {
+        unitNumber: 2,
+        title: 'Empathize — Understanding User Needs & Context',
+        keyTopics: [
+          'User Observation & Field Immersion',
+          'Conducting User Interviews & Active Listening',
+          'Developing Empathy Maps',
+          'Persona Creation & Extreme Users'
+        ],
+      },
+      {
+        unitNumber: 3,
+        title: 'Define — Re-framing Problems & Point of View (POV)',
+        keyTopics: [
+          'Affinity Clustering & Insight Synthesis',
+          'Crafting Actionable POV Statements',
+          'Developing "How Might We" (HMW) Questions',
+          'Root Cause Analysis & User Journey Mapping'
+        ],
+      },
+      {
+        unitNumber: 4,
+        title: 'Ideate — Creative Divergence & Solution Synthesis',
+        keyTopics: [
+          'Brainstorming & Brainwriting Rules',
+          'SCAMPER & Lateral Thinking Techniques',
+          'Mind Mapping & Visual Storyboarding',
+          'Feasibility vs Viability Matrix & Idea Prioritization'
+        ],
+      },
+      {
+        unitNumber: 5,
+        title: 'Prototype & Test — Iterative Validation & Real-world Feedback',
+        keyTopics: [
+          'Low-Fidelity Prototyping & Paper Mockups',
+          'Rapid Physical & Digital Model Building',
+          'Planning & Executing Usability Tests',
+          'Feedback Capture Grid & Iteration Cycles'
+        ],
+      },
+    ],
+  },
 ];
 
 export interface CanonicalSubjectInfo {
@@ -512,6 +579,16 @@ export const CANONICAL_SEMESTER_1_MAP: CanonicalSubjectInfo[] = [
     legacyNames: ['WPL', 'Web Programming Lab'],
     knownUuids: [],
   },
+  {
+    code: '', // Subject code not available yet; leave empty
+    id: 'design-thinking',
+    slug: 'design-thinking',
+    name: 'Design Thinking',
+    legacyCodes: [],
+    legacySlugs: ['design-thinking', 'dt'],
+    legacyNames: ['Design Thinking', 'DT'],
+    knownUuids: [],
+  },
 ];
 
 /**
@@ -524,14 +601,14 @@ export function resolveSubjectIdentifier(val: unknown): string | null {
   if (!clean) return null;
 
   for (const item of CANONICAL_SEMESTER_1_MAP) {
-    if (item.code.toLowerCase() === clean) return item.code;
-    if (item.id.toLowerCase() === clean) return item.code;
-    if (item.slug.toLowerCase() === clean) return item.code;
-    if (item.name.toLowerCase() === clean) return item.code;
-    if (item.legacyCodes.some((lc) => lc.toLowerCase() === clean)) return item.code;
-    if (item.legacySlugs.some((ls) => ls.toLowerCase() === clean)) return item.code;
-    if (item.legacyNames.some((ln) => ln.toLowerCase() === clean)) return item.code;
-    if (item.knownUuids.some((u) => u.toLowerCase() === clean)) return item.code;
+    if (item.code && item.code.toLowerCase() === clean) return item.id;
+    if (item.id && item.id.toLowerCase() === clean) return item.id;
+    if (item.slug && item.slug.toLowerCase() === clean) return item.id;
+    if (item.name && item.name.toLowerCase() === clean) return item.id;
+    if (item.legacyCodes && item.legacyCodes.some((lc) => lc && lc.toLowerCase() === clean)) return item.id;
+    if (item.legacySlugs && item.legacySlugs.some((ls) => ls && ls.toLowerCase() === clean)) return item.id;
+    if (item.legacyNames && item.legacyNames.some((ln) => ln && ln.toLowerCase() === clean)) return item.id;
+    if (item.knownUuids && item.knownUuids.some((u) => u && u.toLowerCase() === clean)) return item.id;
   }
 
   return null;
@@ -541,9 +618,16 @@ export function resolveSubjectIdentifier(val: unknown): string | null {
  * Resolves any identifier to the canonical subject object from SUBJECTS.
  */
 export function getCanonicalSubject(val: unknown): Subject | null {
-  const code = resolveSubjectIdentifier(val);
-  if (!code) return null;
-  return SUBJECTS.find((s) => s.code === code || s.id === code) || null;
+  const codeOrId = resolveSubjectIdentifier(val);
+  if (!codeOrId) return null;
+  return (
+    SUBJECTS.find(
+      (s) =>
+        s.id === codeOrId ||
+        (s.code && s.code === codeOrId) ||
+        (s.slug && s.slug === codeOrId)
+    ) || null
+  );
 }
 
 /**
@@ -562,10 +646,10 @@ export function materialBelongsToSubject(
   if (!material || !subject) return false;
 
   // 1. Direct match on subjectId or code (e.g. '261CR104')
-  if (material.subjectId && (material.subjectId === subject.id || material.subjectId === subject.code)) {
+  if (material.subjectId && (material.subjectId === subject.id || (subject.code && material.subjectId === subject.code))) {
     return true;
   }
-  if (material.subjectCode && (material.subjectCode === subject.code || material.subjectCode === subject.id)) {
+  if (material.subjectCode && ((subject.code && material.subjectCode === subject.code) || material.subjectCode === subject.id)) {
     return true;
   }
 

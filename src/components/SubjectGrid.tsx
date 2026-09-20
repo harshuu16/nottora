@@ -20,7 +20,7 @@ export const SubjectGrid: React.FC<SubjectGridProps> = ({ subjects, onSelectSubj
             </span>
             <span className="text-xs text-[#A8A29E]">·</span>
             <span className="text-xs font-mono text-[#78716C] bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E6E1D6]">
-              Semester 1 · 8 Subjects
+              Semester 1 · {subjects.length} Subjects
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold font-editorial text-[#1C1917] tracking-tight">

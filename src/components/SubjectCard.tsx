@@ -11,7 +11,8 @@ import {
   ChevronRight,
   BookOpen,
   Languages,
-  Globe
+  Globe,
+  Lightbulb
 } from 'lucide-react';
 import { Subject } from '../types';
 
@@ -31,6 +32,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap,
   Languages,
   Globe,
+  Lightbulb,
 };
 
 export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) => {
@@ -51,9 +53,15 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) =>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#F5F2EB] text-[#57534E] border border-[#E6E1D6]">
-              {subject.code}
-            </span>
+            {subject.code ? (
+              <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#F5F2EB] text-[#57534E] border border-[#E6E1D6]">
+                {subject.code}
+              </span>
+            ) : subject.shortName ? (
+              <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-[#F5F2EB] text-[#57534E] border border-[#E6E1D6]">
+                {subject.shortName}
+              </span>
+            ) : null}
             <span className="text-[11px] text-[#A8A29E] font-medium">
               {subject.credits} Credits
             </span>
