@@ -45,9 +45,17 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
     initialCategory || 'all'
   );
   const [subjectSearch, setSubjectSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'by-unit' | 'flat'>('by-unit');
+  const [viewMode, setViewMode] = useState<'by-unit' | 'flat'>(
+    subject.units && subject.units.length > 0 ? 'by-unit' : 'flat'
+  );
   const [collapsedUnits, setCollapsedUnits] = useState<Record<number, boolean>>({});
   const [studiedUnits, setStudiedUnits] = useState<Record<number, boolean>>({});
+
+  React.useEffect(() => {
+    if (!subject.units || subject.units.length === 0) {
+      setViewMode('flat');
+    }
+  }, [subject.id, subject.units]);
 
   // Synchronize category with initialCategory whenever browser Back/Forward (popstate) or parent route changes
   React.useEffect(() => {
@@ -183,9 +191,11 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                   {subject.shortName}
                 </span>
               ) : null}
-              <span className="text-xs text-[#78716C] bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E5E0D5]">
-                {subject.credits} Credits Course
-              </span>
+              {subject.credits !== undefined && subject.credits > 0 ? (
+                <span className="text-xs text-[#78716C] bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#E5E0D5]">
+                  {subject.credits} Credits Course
+                </span>
+              ) : null}
               <span className="text-xs text-[#78716C]">
                 {subject.college} · {subject.branch}
               </span>
@@ -209,7 +219,13 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
               <div className="text-xs text-[#78716C]">Available Materials</div>
             </div>
             <div className="text-xs text-[#78716C]">
-              <span className="font-semibold text-[#44403C]">{subject.units.length} Units</span> Syllabus
+              {subject.units && subject.units.length > 0 ? (
+                <>
+                  <span className="font-semibold text-[#44403C]">{subject.units.length} Units</span> Syllabus
+                </>
+              ) : (
+                <span className="font-semibold text-[#44403C]">Project Based</span>
+              )}
             </div>
           </div>
         </div>
@@ -271,27 +287,29 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
           })}
         </div>
 
-        <div className="flex items-center gap-2 text-xs self-end sm:self-auto">
-          <span className="text-[#A8A29E]">Layout:</span>
-          <button
-            type="button"
-            onClick={() => setViewMode('by-unit')}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              viewMode === 'by-unit' ? 'bg-[#EAE5DA] text-[#1C1917]' : 'text-[#78716C] hover:text-[#1C1917]'
-            }`}
-          >
-            By Unit
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('flat')}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              viewMode === 'flat' ? 'bg-[#EAE5DA] text-[#1C1917]' : 'text-[#78716C] hover:text-[#1C1917]'
-            }`}
-          >
-            All Files
-          </button>
-        </div>
+        {subject.units && subject.units.length > 0 && (
+          <div className="flex items-center gap-2 text-xs self-end sm:self-auto">
+            <span className="text-[#A8A29E]">Layout:</span>
+            <button
+              type="button"
+              onClick={() => setViewMode('by-unit')}
+              className={`px-2 py-1 rounded text-xs font-medium ${
+                viewMode === 'by-unit' ? 'bg-[#EAE5DA] text-[#1C1917]' : 'text-[#78716C] hover:text-[#1C1917]'
+              }`}
+            >
+              By Unit
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('flat')}
+              className={`px-2 py-1 rounded text-xs font-medium ${
+                viewMode === 'flat' ? 'bg-[#EAE5DA] text-[#1C1917]' : 'text-[#78716C] hover:text-[#1C1917]'
+              }`}
+            >
+              All Files
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Material Display Area */}
@@ -321,7 +339,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
             </button>
           )}
         </div>
-      ) : viewMode === 'flat' ? (
+      ) : (viewMode === 'flat' || !subject.units || subject.units.length === 0) ? (
         // Flat list of materials
         filteredMaterials.length === 0 ? (
           <div className="p-12 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">

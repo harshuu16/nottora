@@ -29,7 +29,7 @@ export interface Subject {
   college: string;
   iconName: string;
   units: Unit[];
-  credits: number;
+  credits?: number;
   totalMaterials: number;
 }
 

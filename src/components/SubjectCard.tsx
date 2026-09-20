@@ -10,9 +10,10 @@ import {
   Zap, 
   ChevronRight,
   BookOpen,
-  Languages,
-  Globe,
-  Lightbulb
+  Languages, 
+  Globe, 
+  Lightbulb,
+  FolderKanban
 } from 'lucide-react';
 import { Subject } from '../types';
 
@@ -33,6 +34,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Languages,
   Globe,
   Lightbulb,
+  FolderKanban,
 };
 
 export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) => {
@@ -62,9 +64,11 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) =>
                 {subject.shortName}
               </span>
             ) : null}
-            <span className="text-[11px] text-[#A8A29E] font-medium">
-              {subject.credits} Credits
-            </span>
+            {subject.credits !== undefined && subject.credits > 0 ? (
+              <span className="text-[11px] text-[#A8A29E] font-medium">
+                {subject.credits} Credits
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -82,8 +86,17 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) =>
       {/* Card Footer: Units & Material Counts */}
       <div className="pt-3 border-t border-[#F2EFE9] flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 text-[#78716C]">
-          <span className="font-medium text-[#44403C]">{subject.units.length} Units</span>
-          <span>·</span>
+          {subject.units && subject.units.length > 0 ? (
+            <>
+              <span className="font-medium text-[#44403C]">{subject.units.length} Units</span>
+              <span>·</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-[#44403C]">Project</span>
+              <span>·</span>
+            </>
+          )}
           <span className="text-[#C2410C] font-semibold">{subject.totalMaterials} Materials</span>
         </div>
 

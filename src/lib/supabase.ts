@@ -387,10 +387,28 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
 
   const finalCode = fallback !== undefined && fallback !== null ? fallback.code : (dbSubject.code || '');
   const finalId = fallback?.id || resolvedCode || dbSubject.id;
-  const finalShortName = fallback?.shortName || dbSubject.short_name || (fallback?.name === 'Design Thinking' || dbSubject.name === 'Design Thinking' ? 'DT' : undefined);
+  const finalShortName = fallback?.shortName || dbSubject.short_name || (
+    fallback?.name === 'Design Thinking' || dbSubject.name === 'Design Thinking' ? 'DT' :
+    fallback?.name === 'Non-Syllabus Project' || dbSubject.name === 'Non-Syllabus Project' ? 'NSP' :
+    undefined
+  );
   const finalUuid = isValidUuid(dbSubject.id)
     ? dbSubject.id
     : (fallback?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === finalCode)?.knownUuids?.[0]);
+
+  const finalCredits = fallback?.credits !== undefined
+    ? fallback.credits
+    : (typeof dbSubject.credits === 'number' ? dbSubject.credits : undefined);
+
+  const finalUnits = fallback?.units !== undefined
+    ? fallback.units
+    : (fallback ? [] : [
+        { unitNumber: 1, title: 'Unit 1 Fundamentals', keyTopics: ['Core Theory', 'Key Definitions'] },
+        { unitNumber: 2, title: 'Unit 2 Advanced Concepts', keyTopics: ['Formulations', 'Derivations'] },
+        { unitNumber: 3, title: 'Unit 3 Applied Principles', keyTopics: ['Analysis', 'Problem Solving'] },
+        { unitNumber: 4, title: 'Unit 4 Core Topics', keyTopics: ['System Design', 'Implementations'] },
+        { unitNumber: 5, title: 'Unit 5 Advanced Applications', keyTopics: ['Case Studies', 'Recent Developments'] },
+      ]);
 
   return {
     id: finalId,
@@ -405,15 +423,9 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
     college: fallback?.college || 'Poornima College of Engineering',
     shortDescription: fallback?.shortDescription || dbSubject.description || `${dbSubject.name} curriculum`,
     iconName: fallback?.iconName || dbSubject.icon_name || 'BookOpen',
-    credits: fallback?.credits || dbSubject.credits || 3,
+    credits: finalCredits,
     totalMaterials: typeof totalMaterialsCount === 'number' ? totalMaterialsCount : 0,
-    units: fallback?.units || [
-      { unitNumber: 1, title: 'Unit 1 Fundamentals', keyTopics: ['Core Theory', 'Key Definitions'] },
-      { unitNumber: 2, title: 'Unit 2 Advanced Concepts', keyTopics: ['Formulations', 'Derivations'] },
-      { unitNumber: 3, title: 'Unit 3 Applied Principles', keyTopics: ['Analysis', 'Problem Solving'] },
-      { unitNumber: 4, title: 'Unit 4 Core Topics', keyTopics: ['System Design', 'Implementations'] },
-      { unitNumber: 5, title: 'Unit 5 Advanced Applications', keyTopics: ['Case Studies', 'Recent Developments'] },
-    ],
+    units: finalUnits,
   };
 }
 
@@ -827,6 +839,7 @@ export async function fetchSubjects(): Promise<Subject[]> {
       '261FY526', // Language Lab
       '261CR124', // WPL
       'design-thinking', // Design Thinking (9th subject)
+      'non-syllabus-project', // Non-Syllabus Project (10th subject)
     ];
 
     const getCanonicalRank = (s: Subject) => {
@@ -853,6 +866,7 @@ export async function fetchSubjects(): Promise<Subject[]> {
 
     // Safely attempt sync in background if Supabase is connected
     syncDesignThinkingSubject().catch(() => {});
+    syncNonSyllabusProjectSubject().catch(() => {});
 
     return validSubjects;
   } catch (err) {
@@ -906,6 +920,57 @@ export async function syncDesignThinkingSubject(): Promise<void> {
         description: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
         credits: 2,
         icon_name: 'Lightbulb',
+      }]);
+  } catch (err) {
+    // Graceful error handling (e.g., if unauthenticated or RLS blocks insert)
+  }
+}
+
+/**
+ * Ensures the "Non-Syllabus Project" subject entry exists in the Supabase database
+ * using the same database structure as the other Semester 1 subjects, without creating
+ * duplicates, without inserting fake materials, without fake units or credits, and leaving the code field empty/null
+ * so the user can easily update it later when official code is available.
+ */
+export async function syncNonSyllabusProjectSubject(): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
+  try {
+    const { data: existing, error: checkError } = await client
+      .from('subjects')
+      .select('id, name, slug, code, semester_id')
+      .or('id.eq.non-syllabus-project,slug.eq.non-syllabus-project,name.ilike.Non-Syllabus Project,name.ilike.Non Syllabus Project')
+      .limit(1);
+
+    if (checkError || (existing && existing.length > 0)) {
+      return;
+    }
+
+    let semesterId: string | null = null;
+    try {
+      const { data: sems } = await client
+        .from('semesters')
+        .select('id')
+        .eq('semester_number', 1)
+        .limit(1);
+      if (sems && sems.length > 0) {
+        semesterId = sems[0].id;
+      }
+    } catch {
+      // ignore
+    }
+
+    await client
+      .from('subjects')
+      .insert([{
+        name: 'Non-Syllabus Project',
+        code: '', // Subject code left empty/null for now
+        slug: 'non-syllabus-project',
+        semester_id: semesterId,
+        description: 'Hands-on Project Work, Technical Implementation & Practical Innovation',
+        credits: null, // No invented credits
+        icon_name: 'FolderKanban',
       }]);
   } catch (err) {
     // Graceful error handling (e.g., if unauthenticated or RLS blocks insert)

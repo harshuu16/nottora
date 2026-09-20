@@ -485,6 +485,21 @@ export const SUBJECTS: Subject[] = [
       },
     ],
   },
+  {
+    id: 'non-syllabus-project',
+    slug: 'non-syllabus-project',
+    code: '', // Subject code not available yet; leave empty
+    shortName: 'NSP',
+    name: 'Non-Syllabus Project',
+    shortDescription: 'Hands-on Project Work, Technical Implementation & Practical Innovation',
+    semester: 1,
+    year: 1,
+    branch: 'B.Tech CSE',
+    college: 'Poornima College of Engineering',
+    iconName: 'FolderKanban',
+    totalMaterials: 0,
+    units: [],
+  },
 ];
 
 export interface CanonicalSubjectInfo {
@@ -587,6 +602,16 @@ export const CANONICAL_SEMESTER_1_MAP: CanonicalSubjectInfo[] = [
     legacyCodes: [],
     legacySlugs: ['design-thinking', 'dt'],
     legacyNames: ['Design Thinking', 'DT'],
+    knownUuids: [],
+  },
+  {
+    code: '', // Subject code not available yet; leave empty
+    id: 'non-syllabus-project',
+    slug: 'non-syllabus-project',
+    name: 'Non-Syllabus Project',
+    legacyCodes: [],
+    legacySlugs: ['non-syllabus-project', 'nsp'],
+    legacyNames: ['Non-Syllabus Project', 'NSP', 'Non Syllabus Project'],
     knownUuids: [],
   },
 ];
