@@ -28,6 +28,7 @@ import { MaterialModal } from './components/MaterialModal';
 import { SearchModal } from './components/SearchModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { AcademicContextModal } from './components/AcademicContextModal';
+import { ReportProblemModal } from './components/ReportProblemModal';
 import { useTheme } from './lib/theme';
 import { AdminPortalModal } from './components/AdminPortalModal';
 import { Footer } from './components/Footer';
@@ -87,6 +88,9 @@ export default function App() {
 
   // Toast feedback state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Report a Problem Modal State
+  const [isReportProblemOpen, setIsReportProblemOpen] = useState<boolean>(false);
 
   // Reusable loader for live academic subjects and materials from Supabase
   const refreshAcademicData = useCallback(async () => {
@@ -534,6 +538,25 @@ export default function App() {
     return null;
   }, [view, enrichedSubjects]);
 
+  // Compute clean, human-readable breadcrumb / context for Problem Reports
+  const reportProblemPageContext = useMemo(() => {
+    if (activeMaterial) {
+      const unitPart = activeMaterial.unitNumber ? ` → Unit ${activeMaterial.unitNumber}` : '';
+      return `${activeMaterial.subjectName}${unitPart} → ${activeMaterial.title} (${activeMaterial.category})`;
+    }
+    if (view.type === 'subject') {
+      return `${currentSubjectObj?.name || 'Subject'} (${currentSubjectObj?.code || ''}) → All Units`;
+    }
+    if (view.type === 'category') {
+      const catTitle = view.category === 'important-questions' ? 'Important Questions' : view.category === 'pyqs' ? 'PYQs' : view.category === 'lab-manuals' ? 'Lab Manuals' : 'Notes';
+      return `Category: ${catTitle}`;
+    }
+    if (view.type === 'search') {
+      return `Search: "${view.query}"`;
+    }
+    return `${context.collegeShort} · ${context.branchCode} · Sem ${context.semester} · Home`;
+  }, [activeMaterial, view, currentSubjectObj, context]);
+
   return (
     <div className="min-h-screen bg-[#FBF9F5] text-[#1C1917] flex flex-col font-sans">
       {/* Global Header */}
@@ -547,6 +570,7 @@ export default function App() {
           setIsSearchModalOpen(true);
         }}
         onOpenBookmarks={() => setIsBookmarksDrawerOpen(true)}
+        onOpenReportProblem={() => setIsReportProblemOpen(true)}
         onOpenContextModal={() => setIsContextModalOpen(true)}
         bookmarksCount={bookmarkedIds.size}
       />
@@ -714,6 +738,14 @@ export default function App() {
           setContext(newCtx);
           addToast('info', 'Academic Context Updated', `Active Cohort: ${newCtx.collegeShort} · ${newCtx.branchCode} · Sem ${newCtx.semester} · ${newCtx.session || ACADEMIC_SESSION_DISPLAY}`);
         }}
+      />
+
+      {/* Report a Problem Modal */}
+      <ReportProblemModal
+        isOpen={isReportProblemOpen}
+        onClose={() => setIsReportProblemOpen(false)}
+        pageContext={reportProblemPageContext}
+        route={typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/'}
       />
 
       {/* Protected Admin Portal Modal (Triggered via /admin, #admin, ?admin=true, or shortcut) */}

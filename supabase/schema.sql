@@ -443,3 +443,38 @@ BEGIN
     ON CONFLICT (semester_id, code) DO UPDATE SET name = EXCLUDED.name, slug = EXCLUDED.slug, credits = EXCLUDED.credits, icon_name = EXCLUDED.icon_name, description = EXCLUDED.description;
 
 END $$;
+
+-- ==============================================================================
+-- 11. PROBLEM REPORTS & FEEDBACK TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.problem_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    problem_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    page_url TEXT,
+    route TEXT,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    email TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_problem_reports_status ON public.problem_reports(status);
+CREATE INDEX IF NOT EXISTS idx_problem_reports_created_at ON public.problem_reports(created_at DESC);
+
+ALTER TABLE public.problem_reports ENABLE ROW LEVEL SECURITY;
+
+-- Allow students (including anonymous visitors) to submit problem reports
+DROP POLICY IF EXISTS "Public can submit problem reports" ON public.problem_reports;
+CREATE POLICY "Public can submit problem reports"
+    ON public.problem_reports FOR INSERT
+    TO public
+    WITH CHECK (true);
+
+-- Admins can view and manage problem reports
+DROP POLICY IF EXISTS "Admin manage problem reports" ON public.problem_reports;
+CREATE POLICY "Admin manage problem reports"
+    ON public.problem_reports FOR ALL
+    TO authenticated
+    USING (public.is_admin())
+    WITH CHECK (public.is_admin());

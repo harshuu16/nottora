@@ -1,47 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'nottora-theme-preference';
 
 /**
- * Returns the active system theme preference ('light' | 'dark').
- */
-export function getSystemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined') return 'light';
-  try {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  } catch {
-    return 'light';
-  }
-}
-
-/**
- * Reads stored theme choice from localStorage ('light' | 'dark' | 'system').
- * Defaults to 'system'.
+ * Reads stored theme choice from localStorage ('light' | 'dark').
+ * Defaults to 'light'.
  */
 export function getStoredThemePreference(): ThemeMode {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return 'light';
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      return stored;
+    if (stored === 'dark') {
+      return 'dark';
+    }
+    if (stored === 'light') {
+      return 'light';
     }
   } catch {
     // ignore
   }
-  return 'system';
+  return 'light';
 }
 
 /**
  * Resolves a ThemeMode to an actual active 'light' or 'dark' state.
  */
 export function resolveTheme(mode: ThemeMode): ResolvedTheme {
-  if (mode === 'system') {
-    return getSystemTheme();
-  }
-  return mode;
+  return mode === 'dark' ? 'dark' : 'light';
 }
 
 /**
@@ -73,11 +61,7 @@ export function applyTheme(mode: ThemeMode): ResolvedTheme {
  */
 export function setStoredThemePreference(mode: ThemeMode): ResolvedTheme {
   try {
-    if (mode === 'system') {
-      localStorage.setItem(THEME_STORAGE_KEY, 'system');
-    } else {
-      localStorage.setItem(THEME_STORAGE_KEY, mode);
-    }
+    localStorage.setItem(THEME_STORAGE_KEY, mode);
   } catch {
     // ignore
   }
@@ -103,29 +87,11 @@ export function useTheme() {
     setThemeMode(nextTheme);
   }, [resolvedTheme, setThemeMode]);
 
-  // Handle system preference changes & storage changes
+  // Handle initial mount application & storage changes across tabs
   useEffect(() => {
-    // Initial application on mount
     const initialResolved = applyTheme(themeMode);
     setResolvedTheme(initialResolved);
 
-    // Media query listener for OS changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleMediaChange = () => {
-      const currentPref = getStoredThemePreference();
-      if (currentPref === 'system') {
-        const newResolved = applyTheme('system');
-        setResolvedTheme(newResolved);
-      }
-    };
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleMediaChange);
-    } else {
-      mediaQuery.addListener(handleMediaChange);
-    }
-
-    // Storage listener across tabs
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === THEME_STORAGE_KEY) {
         const newPref = getStoredThemePreference();
@@ -137,11 +103,6 @@ export function useTheme() {
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleMediaChange);
-      } else {
-        mediaQuery.removeListener(handleMediaChange);
-      }
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [themeMode]);

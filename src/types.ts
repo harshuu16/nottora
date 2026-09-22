@@ -184,3 +184,23 @@ export interface CreateMaterialInput {
   file_size?: string;
   published?: boolean;
 }
+
+export interface ProblemReport {
+  id: string;
+  problem_type: string;
+  description: string;
+  page_url?: string | null;
+  route?: string | null;
+  user_id?: string | null;
+  email?: string | null;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  created_at: string;
+}
+
+export interface CreateProblemReportInput {
+  problem_type: string;
+  description: string;
+  page_url?: string;
+  route?: string;
+  email?: string;
+}

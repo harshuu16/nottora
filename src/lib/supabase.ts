@@ -1298,3 +1298,74 @@ export async function adminDeleteMaterial(id: string): Promise<void> {
 
   if (error) throw error;
 }
+
+/**
+ * Submits a student problem report to Supabase (with graceful offline fallback).
+ * Uses anon key with strict RLS (insert only for public).
+ */
+export async function submitProblemReport(input: {
+  problemType: string;
+  description: string;
+  pageUrl?: string;
+  route?: string;
+  email?: string;
+}): Promise<{ success: boolean; error?: string; savedOffline?: boolean }> {
+  const client = getSupabase();
+
+  const reportPayload = {
+    problem_type: input.problemType,
+    description: input.description.trim(),
+    page_url: input.pageUrl || (typeof window !== 'undefined' ? window.location.href : null),
+    route: input.route || (typeof window !== 'undefined' ? window.location.pathname + window.location.search : null),
+    email: input.email && input.email.trim() ? input.email.trim() : null,
+    status: 'open',
+  };
+
+  const saveOfflineReport = () => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const existing = JSON.parse(localStorage.getItem('nottora_problem_reports') || '[]');
+        existing.push({
+          id: 'offline_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+          ...reportPayload,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem('nottora_problem_reports', JSON.stringify(existing));
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+  };
+
+  if (!client) {
+    saveOfflineReport();
+    return { success: true, savedOffline: true };
+  }
+
+  try {
+    const { error } = await client
+      .from('problem_reports')
+      .insert([reportPayload]);
+
+    if (error) {
+      console.warn('[Supabase Problem Report Notice]:', error.message);
+      // If table doesn't exist yet, preserve report locally and keep user experience smooth
+      if (
+        error.code === '42P01' ||
+        error.message.toLowerCase().includes('relation') ||
+        error.message.toLowerCase().includes('not found') ||
+        error.message.toLowerCase().includes('does not exist')
+      ) {
+        saveOfflineReport();
+        return { success: true, savedOffline: true };
+      }
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[Supabase Problem Report Exception]:', err);
+    saveOfflineReport();
+    return { success: true, savedOffline: true };
+  }
+}

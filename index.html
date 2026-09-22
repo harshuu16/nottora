@@ -14,7 +14,7 @@
       (function() {
         try {
           var stored = localStorage.getItem('nottora-theme-preference');
-          var isDark = stored === 'dark' || ((!stored || stored === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var isDark = stored === 'dark';
           if (isDark) {
             document.documentElement.classList.add('dark');
             document.documentElement.classList.remove('light');
