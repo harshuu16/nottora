@@ -28,6 +28,7 @@ import { MaterialModal } from './components/MaterialModal';
 import { SearchModal } from './components/SearchModal';
 import { BookmarksDrawer } from './components/BookmarksDrawer';
 import { AcademicContextModal } from './components/AcademicContextModal';
+import { useTheme } from './lib/theme';
 import { AdminPortalModal } from './components/AdminPortalModal';
 import { Footer } from './components/Footer';
 import { ToastContainer, ToastMessage } from './components/Toast';
@@ -42,6 +43,9 @@ import {
 } from './lib/router';
 
 export default function App() {
+  // Theme management & synchronization
+  useTheme();
+
   // Academic hierarchy context
   const [context, setContext] = useState<AcademicContext>(CURRENT_CONTEXT);
 
