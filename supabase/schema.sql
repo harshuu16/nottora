@@ -109,12 +109,15 @@ CREATE INDEX IF NOT EXISTS idx_materials_search ON public.materials USING gin(
 -- 4. AUTOMATIC TIMESTAMP TRIGGER
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.set_materials_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
-    NEW.updated_at = timezone('utc'::text, now());
+    NEW.updated_at = pg_catalog.timezone('utc'::text, pg_catalog.now());
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trigger_materials_updated_at ON public.materials;
 CREATE TRIGGER trigger_materials_updated_at
@@ -126,13 +129,15 @@ CREATE TRIGGER trigger_materials_updated_at
 -- 5. SECURE ADMIN VERIFICATION FUNCTION
 -- ==============================================================================
 -- Validates admin privileges strictly via Supabase Auth app_metadata (never user_metadata)
+-- Configured as SECURITY INVOKER with pinned search_path = '' for least privilege
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY INVOKER
+SET search_path = ''
 AS $$
-  SELECT coalesce(
+  SELECT pg_catalog.coalesce(
     (auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean,
     (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
     false
@@ -338,6 +343,7 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
+SET search_path = ''
 AS $$
     SELECT 
         m.id,
@@ -368,8 +374,8 @@ AS $$
           OR m.title ILIKE '%' || search_query || '%'
           OR s.name ILIKE '%' || search_query || '%'
           OR s.code ILIKE '%' || search_query || '%'
-          OR coalesce(m.topic, '') ILIKE '%' || search_query || '%'
-          OR coalesce(m.description, '') ILIKE '%' || search_query || '%'
+          OR pg_catalog.coalesce(m.topic, '') ILIKE '%' || search_query || '%'
+          OR pg_catalog.coalesce(m.description, '') ILIKE '%' || search_query || '%'
       )
     ORDER BY m.created_at DESC;
 $$;

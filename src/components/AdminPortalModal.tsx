@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Info,
   Layers,
-  FileCheck
+  FileCheck,
+  Edit3,
 } from 'lucide-react';
 import { MaterialCategory, Subject, DbCollege, DbBranch, DbSemester, DbSubject } from '../types';
 import {
@@ -31,6 +32,7 @@ import {
   adminFetchAllMaterials,
   adminToggleMaterialPublished,
   adminDeleteMaterial,
+  adminEditMaterial,
   AdminMaterialRecord,
   AdminUploadInput,
   isValidUuid,
@@ -108,6 +110,18 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
   const [manageFilterSubject, setManageFilterSubject] = useState<string>('all');
   const [manageFilterCategory, setManageFilterCategory] = useState<string>('all');
   const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
+
+  // Edit material state
+  const [editingMaterial, setEditingMaterial] = useState<AdminMaterialRecord | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSubjectId, setEditSubjectId] = useState('');
+  const [editCategory, setEditCategory] = useState<MaterialCategory>('notes');
+  const [editUnit, setEditUnit] = useState<string>('');
+  const [editTopic, setEditTopic] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPublished, setEditPublished] = useState(true);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Check initial authentication
   useEffect(() => {
@@ -188,78 +202,264 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
     loadDbSubjects();
   }, [isOpen]);
 
-  // Map loaded subjects so that every option provides the authentic Supabase subjects.id UUID
+  // Canonical Semester 1 subjects for PCE B.Tech CSE (Autonomous)
+  // 1. Communication Skills — 261FY507
+  // 2. Chemistry — 261FY101
+  // 3. BEEE — 261CR104
+  // 4. Mathematics / Engineering Mathematics — 261FY103
+  // 5. MPWS — 261FY629
+  // 6. C Programming / Programming in C — 261FY106
+  // 7. Language Lab — 261FY526
+  // 8. WPL — 261CR124
+  // 9. Design Thinking (DT) — DO NOT INVENT A CODE
+  // 10. Non-Syllabus Project (NSP) — DO NOT INVENT A CODE
+  const CANONICAL_SEMESTER_1_ADMIN_SUBJECTS = useMemo(() => [
+    {
+      id: '261FY507',
+      code: '261FY507',
+      name: 'Communication Skills',
+      displayName: 'Communication Skills (261FY507)',
+      slug: 'communication-skills',
+      fallbackUuid: '83daf8a2-62a3-42a3-8149-2e9a5e10cd50',
+      aliases: ['1fy1-05', 'communication-skills', 'communication skills', '261fy507'],
+    },
+    {
+      id: '261FY101',
+      code: '261FY101',
+      name: 'Chemistry',
+      displayName: 'Chemistry (261FY101)',
+      slug: 'chemistry',
+      fallbackUuid: 'f9e3096c-fb5c-428a-bf63-be6561d204ab',
+      aliases: ['1fy2-03', 'chemistry', 'engineering chemistry', '261fy101'],
+    },
+    {
+      id: '261CR104',
+      code: '261CR104',
+      name: 'BEEE',
+      displayName: 'BEEE (261CR104)',
+      slug: 'beee',
+      fallbackUuid: 'ea50315f-f2a7-4964-85c8-8eb8e526e51f',
+      aliases: ['1fy3-07', 'beee', 'basic electrical & electronics engineering', '261cr104'],
+    },
+    {
+      id: '261FY103',
+      code: '261FY103',
+      name: 'Mathematics',
+      displayName: 'Engineering Mathematics (261FY103)',
+      slug: 'mathematics',
+      fallbackUuid: '7112bf1f-43a4-4ee0-8a90-303de1fb05bc',
+      aliases: ['1fy2-01', 'mathematics', 'engineering mathematics', 'engineering-mathematics', '261fy103'],
+    },
+    {
+      id: '261FY629',
+      code: '261FY629',
+      name: 'MPWS',
+      displayName: 'MPWS (261FY629)',
+      slug: 'mpws',
+      fallbackUuid: '2d6358b4-e5c5-47f3-bb7e-e6cf5097ed9f',
+      aliases: ['1fy4-21', 'mpws', 'manufacturing practices workshop', '261fy629'],
+    },
+    {
+      id: '261FY106',
+      code: '261FY106',
+      name: 'C Programming',
+      displayName: 'Programming in C (261FY106)',
+      slug: 'c-programming',
+      fallbackUuid: '4d45360f-ab27-4a7b-a63f-89ce15aab471',
+      aliases: ['1fy3-06', 'c-programming', 'programming in c', 'programming-in-c', '261fy106'],
+    },
+    {
+      id: '261FY526',
+      code: '261FY526',
+      name: 'Language Lab',
+      displayName: 'Language Lab (261FY526)',
+      slug: 'language-lab',
+      fallbackUuid: '26100526-0000-4000-8000-000000000526',
+      aliases: ['language-lab', 'language lab', '261fy526'],
+    },
+    {
+      id: '261CR124',
+      code: '261CR124',
+      name: 'WPL',
+      displayName: 'Web Programming Lab (WPL) (261CR124)',
+      slug: 'wpl',
+      fallbackUuid: '26100124-0000-4000-8000-000000000124',
+      aliases: ['wpl', 'web-programming-lab', 'web programming lab', '261cr124'],
+    },
+    {
+      id: 'design-thinking',
+      code: '', // DO NOT INVENT A CODE
+      name: 'Design Thinking',
+      displayName: 'Design Thinking (DT)',
+      slug: 'design-thinking',
+      fallbackUuid: '26100000-0000-4000-8000-000000000009',
+      aliases: ['design-thinking', 'design thinking', 'dt'],
+    },
+    {
+      id: 'non-syllabus-project',
+      code: '', // DO NOT INVENT A CODE
+      name: 'Non-Syllabus Project',
+      displayName: 'Non-Syllabus Project (NSP)',
+      slug: 'non-syllabus-project',
+      fallbackUuid: '30d211c6-3e3a-47c5-a9ab-cdc4bb89d989', // Existing row in database
+      aliases: ['1fy3-08', 'nsp', 'non-syllabus-project', 'non-syllabus project', 'non syllabus project'],
+    },
+  ], []);
+
+  // When admin opens portal, safely ensure missing subjects exist in database
+  useEffect(() => {
+    if (!adminUser || !isOpen) return;
+
+    const syncMissingSubjects = async () => {
+      const client = getSupabase();
+      if (!client) return;
+      try {
+        const { data: existing } = await client
+          .from('subjects')
+          .select('id, code, name, slug');
+
+        const existingSlugs = new Set((existing || []).map((s: any) => s.slug?.toLowerCase()));
+        const existingCodes = new Set((existing || []).map((s: any) => s.code?.toLowerCase()).filter(Boolean));
+        const existingNames = new Set((existing || []).map((s: any) => s.name?.toLowerCase()));
+
+        const semesterId = '424fcf6e-e43a-457a-b98a-a95a0492ebc8';
+        let didInsert = false;
+
+        // Language Lab
+        if (!existingSlugs.has('language-lab') && !existingCodes.has('261fy526') && !existingNames.has('language lab')) {
+          const { error } = await client.from('subjects').insert([{
+            id: '26100526-0000-4000-8000-000000000526',
+            semester_id: semesterId,
+            code: '261FY526',
+            name: 'Language Lab',
+            slug: 'language-lab',
+            description: 'Phonetics, Listening Comprehension, Accent Training & Conversational Practice',
+            credits: 2,
+            icon_name: 'Languages',
+          }]);
+          if (!error) didInsert = true;
+        }
+
+        // WPL
+        if (!existingSlugs.has('wpl') && !existingCodes.has('261cr124') && !existingNames.has('wpl') && !existingNames.has('web programming lab')) {
+          const { error } = await client.from('subjects').insert([{
+            id: '26100124-0000-4000-8000-000000000124',
+            semester_id: semesterId,
+            code: '261CR124',
+            name: 'WPL',
+            slug: 'wpl',
+            description: 'Web Programming Lab — HTML5, CSS3, JavaScript Basics, Responsive Design & DOM',
+            credits: 2,
+            icon_name: 'Globe',
+          }]);
+          if (!error) didInsert = true;
+        }
+
+        // Design Thinking (DO NOT INVENT A CODE)
+        if (!existingSlugs.has('design-thinking') && !existingNames.has('design thinking')) {
+          const { error } = await client.from('subjects').insert([{
+            id: '26100000-0000-4000-8000-000000000009',
+            semester_id: semesterId,
+            code: null,
+            name: 'Design Thinking',
+            slug: 'design-thinking',
+            description: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
+            credits: 2,
+            icon_name: 'Lightbulb',
+          }]);
+          if (!error) didInsert = true;
+        }
+
+        if (didInsert) {
+          const { data: refreshed } = await client
+            .from('subjects')
+            .select('id, name, code, slug, semester_id, credits, icon_name')
+            .order('name', { ascending: true });
+          if (refreshed && refreshed.length > 0) {
+            setDbSubjects(refreshed as DbSubject[]);
+          }
+        }
+      } catch (err) {
+        console.warn('[Admin Portal subject sync notice]', err);
+      }
+    };
+
+    syncMissingSubjects();
+  }, [adminUser, isOpen]);
+
+  // Compute availableSubjectOptions: guarantees all 10 Semester 1 subjects in canonical order
   const availableSubjectOptions = useMemo(() => {
-    if (dbSubjects.length > 0) {
-      return dbSubjects.map((dbs) => ({
-        id: dbs.id,
-        uuid: dbs.id,
-        slug: dbs.slug || dbs.id,
-        name: dbs.name,
-        code: dbs.code,
-      }));
+    if (selectedSemesterNumber === 1) {
+      return CANONICAL_SEMESTER_1_ADMIN_SUBJECTS.map((canonical) => {
+        // Link to authentic dbSubjects row if loaded
+        const dbMatch = dbSubjects.find((dbs) => {
+          if (dbs.id === canonical.fallbackUuid) return true;
+          if (dbs.slug && dbs.slug.toLowerCase() === canonical.slug.toLowerCase()) return true;
+          if (canonical.code && dbs.code && dbs.code.toLowerCase() === canonical.code.toLowerCase()) return true;
+          const lowerName = dbs.name?.toLowerCase() || '';
+          if (lowerName === canonical.name.toLowerCase()) return true;
+          return canonical.aliases.some((alias) =>
+            (dbs.code && dbs.code.toLowerCase() === alias) ||
+            (dbs.slug && dbs.slug.toLowerCase() === alias) ||
+            lowerName === alias
+          );
+        });
+
+        const activeUuid = dbMatch && isValidUuid(dbMatch.id) ? dbMatch.id : canonical.fallbackUuid;
+
+        return {
+          id: activeUuid,
+          uuid: activeUuid,
+          slug: dbMatch?.slug || canonical.slug,
+          name: canonical.name,
+          displayName: canonical.displayName,
+          code: canonical.code || dbMatch?.code || '',
+          shortName: canonical.name,
+        };
+      });
     }
 
-    return subjects.map((s) => {
-      const dbMatch = dbSubjects.find(
-        (db) => db.slug === s.slug || db.slug === s.id || db.code === s.code || db.name.toLowerCase() === s.name.toLowerCase()
-      );
-      const uuid = (dbMatch && isValidUuid(dbMatch.id))
-        ? dbMatch.id
-        : (isValidUuid(s.id) ? s.id : s.id);
+    // Other semesters fallback (if any exist in database)
+    const semObj = semesters.find((s) => s.semester_number === selectedSemesterNumber);
+    const filteredDb = semObj ? dbSubjects.filter((dbs) => dbs.semester_id === semObj.id) : dbSubjects;
 
-      return {
-        id: uuid,
-        uuid,
-        slug: s.slug || s.id,
-        name: s.name,
-        code: s.code,
-        shortName: s.shortName,
-      };
-    });
-  }, [dbSubjects, subjects]);
+    return filteredDb.map((dbs) => ({
+      id: dbs.id,
+      uuid: dbs.id,
+      slug: dbs.slug || dbs.id,
+      name: dbs.name,
+      displayName: dbs.code ? `${dbs.name} (${dbs.code})` : dbs.name,
+      code: dbs.code,
+      shortName: dbs.name,
+    }));
+  }, [selectedSemesterNumber, CANONICAL_SEMESTER_1_ADMIN_SUBJECTS, dbSubjects, semesters]);
 
   // Helper to map any selected subject value (slug, code, name, or UUID) to its real database UUID
   const getSubjectDatabaseUuid = useCallback((inputVal: string): { uuid: string; slug: string; name: string } | null => {
     if (!inputVal) return null;
 
-    // 1. If it matches a database subject row by UUID
-    const matchByUuid = dbSubjects.find((s) => s.id === inputVal) ||
-      availableSubjectOptions.find((s) => s.uuid === inputVal || s.id === inputVal);
+    // 1. If it matches an option in availableSubjectOptions
+    const matchInOptions = availableSubjectOptions.find(
+      (s) => s.uuid === inputVal || s.id === inputVal || s.slug === inputVal || (s.code && s.code.toLowerCase() === inputVal.toLowerCase()) || s.name.toLowerCase() === inputVal.toLowerCase()
+    );
+    if (matchInOptions && isValidUuid(matchInOptions.uuid)) {
+      return { uuid: matchInOptions.uuid, slug: matchInOptions.slug, name: matchInOptions.name };
+    }
+
+    // 2. If it matches a database subject row by UUID
+    const matchByUuid = dbSubjects.find((s) => s.id === inputVal);
     if (matchByUuid && isValidUuid(matchByUuid.id)) {
       return { uuid: matchByUuid.id, slug: matchByUuid.slug || inputVal, name: matchByUuid.name };
     }
 
-    // 2. Match by slug, code, or name in dbSubjects
-    const matchInDb = dbSubjects.find(
-      (s) => s.slug === inputVal || s.code === inputVal || s.name.toLowerCase() === inputVal.toLowerCase()
+    // 3. Match in canonical list
+    const canonicalMatch = CANONICAL_SEMESTER_1_ADMIN_SUBJECTS.find(
+      (c) => c.fallbackUuid === inputVal || c.slug === inputVal || c.id === inputVal || (c.code && c.code.toLowerCase() === inputVal.toLowerCase()) || c.aliases.includes(inputVal.toLowerCase())
     );
-    if (matchInDb && isValidUuid(matchInDb.id)) {
-      return { uuid: matchInDb.id, slug: matchInDb.slug || inputVal, name: matchInDb.name };
-    }
-
-    // 3. Match in availableSubjectOptions
-    const matchInResolved = availableSubjectOptions.find(
-      (s) => s.slug === inputVal || s.code === inputVal || s.name.toLowerCase() === inputVal.toLowerCase()
-    );
-    if (matchInResolved && isValidUuid(matchInResolved.uuid)) {
-      return { uuid: matchInResolved.uuid, slug: matchInResolved.slug, name: matchInResolved.name };
-    }
-
-    // 4. Match in raw subjects prop
-    const matchInProp = subjects.find(
-      (s) => s.id === inputVal || s.slug === inputVal || s.code === inputVal || s.name.toLowerCase() === inputVal.toLowerCase()
-    );
-    if (matchInProp) {
-      if (isValidUuid(matchInProp.id)) {
-        return { uuid: matchInProp.id, slug: matchInProp.slug || inputVal, name: matchInProp.name };
-      }
-      const crossMatch = dbSubjects.find(
-        (db) => db.slug === matchInProp.slug || db.slug === matchInProp.id || db.code === matchInProp.code
-      );
-      if (crossMatch && isValidUuid(crossMatch.id)) {
-        return { uuid: crossMatch.id, slug: crossMatch.slug || matchInProp.slug || inputVal, name: crossMatch.name };
-      }
+    if (canonicalMatch) {
+      const dbMatch = dbSubjects.find((dbs) => dbs.id === canonicalMatch.fallbackUuid || dbs.slug === canonicalMatch.slug);
+      const uuid = dbMatch && isValidUuid(dbMatch.id) ? dbMatch.id : canonicalMatch.fallbackUuid;
+      return { uuid, slug: canonicalMatch.slug, name: canonicalMatch.name };
     }
 
     if (isValidUuid(inputVal)) {
@@ -267,7 +467,7 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
     }
 
     return null;
-  }, [dbSubjects, availableSubjectOptions, subjects]);
+  }, [availableSubjectOptions, dbSubjects, CANONICAL_SEMESTER_1_ADMIN_SUBJECTS]);
 
   // Set default subject and synchronize selectedSubjectId so it is always a valid database UUID
   useEffect(() => {
@@ -479,6 +679,60 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       window.open(signedUrl, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       alert(`Could not generate signed URL: ${err.message}`);
+    }
+  };
+
+  // Handle start editing a material
+  const handleStartEdit = (mat: AdminMaterialRecord) => {
+    setEditingMaterial(mat);
+    setEditTitle(mat.title);
+    setEditSubjectId(mat.subject_id);
+    setEditCategory(mat.category);
+    setEditUnit(mat.unit ? String(mat.unit) : '');
+    setEditTopic(mat.topic || '');
+    setEditDescription(mat.description || '');
+    setEditPublished(mat.published);
+    setEditError(null);
+  };
+
+  // Handle saving edited material
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMaterial) return;
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      const subjectMapping = getSubjectDatabaseUuid(editSubjectId);
+      const verifiedSubjectUuid = subjectMapping?.uuid || (isValidUuid(editSubjectId) ? editSubjectId : editingMaterial.subject_id);
+
+      const updated = await adminEditMaterial(editingMaterial.id, {
+        title: editTitle.trim(),
+        category: editCategory,
+        subject_id: verifiedSubjectUuid,
+        unit: editUnit ? parseInt(editUnit, 10) : null,
+        topic: editTopic.trim() || null,
+        description: editDescription.trim() || null,
+        published: editPublished,
+      });
+
+      setAdminMaterials((prev) =>
+        prev.map((m) =>
+          m.id === editingMaterial.id
+            ? {
+                ...m,
+                ...updated,
+                subject_name: subjectMapping?.name || m.subject_name,
+              }
+            : m
+        )
+      );
+
+      setEditingMaterial(null);
+      onMaterialsUpdated();
+    } catch (err: any) {
+      setEditError(err.message || 'Could not save changes.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -828,7 +1082,7 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
                         >
                           {availableSubjectOptions.map((s) => (
                             <option key={s.uuid} value={s.uuid}>
-                              {s.name} {s.code ? `(${s.code})` : s.shortName ? `(${s.shortName})` : ''}
+                              {s.displayName || (s.name + (s.code ? ` (${s.code})` : ''))}
                             </option>
                           ))}
                         </select>
@@ -1033,7 +1287,7 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
                         <option value="all">All Subjects</option>
                         {availableSubjectOptions.map((s) => (
                           <option key={s.uuid} value={s.uuid}>
-                            {s.name}
+                            {s.displayName || s.name}
                           </option>
                         ))}
                       </select>
@@ -1145,6 +1399,16 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
 
                                 <td className="py-3 px-4 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
+                                    {/* Edit Material Metadata & Subject */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEdit(mat)}
+                                      title="Edit Material Metadata & Subject"
+                                      className="p-1.5 rounded-lg text-[#57534E] hover:text-[#C2410C] hover:bg-[#FFF7ED] transition-colors"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+
                                     {/* Test Open signed URL */}
                                     <button
                                       type="button"
@@ -1216,6 +1480,163 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
           </span>
         </div>
       </div>
+
+      {/* Edit Material Modal Overlay */}
+      {editingMaterial && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+          onClick={() => setEditingMaterial(null)}
+        >
+          <div
+            className="bg-[#FFFFFF] border border-[#E0D9CC] rounded-2xl w-full max-w-lg shadow-2xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#EAE5DA] pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-[#1C1917]">Edit Material</h3>
+                <p className="text-[11px] text-[#78716C]">
+                  Update metadata, categorization, or reassign subject
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingMaterial(null)}
+                className="p-1 rounded-lg text-[#78716C] hover:bg-[#F2EFE9] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl text-xs text-[#DC2626]">
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-[#44403C] mb-1">
+                  Material Title <span className="text-[#DC2626]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#44403C] mb-1">
+                  Subject <span className="text-[#DC2626]">*</span>
+                </label>
+                <select
+                  id="edit-select-subject"
+                  required
+                  value={editSubjectId}
+                  onChange={(e) => setEditSubjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs font-semibold text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                >
+                  {availableSubjectOptions.map((s) => (
+                    <option key={s.uuid} value={s.uuid}>
+                      {s.displayName || s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#44403C] mb-1">
+                    Category <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value as MaterialCategory)}
+                    className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                  >
+                    {CATEGORY_OPTIONS.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#44403C] mb-1">Unit Number</label>
+                  <select
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                  >
+                    <option value="">No unit / Entire course</option>
+                    <option value="1">Unit 1</option>
+                    <option value="2">Unit 2</option>
+                    <option value="3">Unit 3</option>
+                    <option value="4">Unit 4</option>
+                    <option value="5">Unit 5</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#44403C] mb-1">Topic / Scope</label>
+                <input
+                  type="text"
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  placeholder="e.g. Unit 1 Differential Calculus"
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#44403C] mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Brief overview of contents..."
+                  className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#E0D9CC] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:border-[#C2410C]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="edit-published-toggle"
+                  checked={editPublished}
+                  onChange={(e) => setEditPublished(e.target.checked)}
+                  className="rounded border-[#E0D9CC] text-[#C2410C] focus:ring-[#C2410C]"
+                />
+                <label htmlFor="edit-published-toggle" className="font-semibold text-[#44403C]">
+                  Published (visible to students)
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#EAE5DA]">
+                <button
+                  type="button"
+                  onClick={() => setEditingMaterial(null)}
+                  className="px-4 py-2 border border-[#E0D9CC] rounded-xl text-[#57534E] hover:bg-[#F2EFE9] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-4 py-2 bg-[#C2410C] hover:bg-[#9A3412] text-white font-semibold rounded-xl flex items-center gap-1.5 transition-colors"
+                >
+                  {isSavingEdit && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

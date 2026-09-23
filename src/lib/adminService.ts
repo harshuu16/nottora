@@ -90,34 +90,205 @@ export async function adminUploadMaterial(
   let resolvedSubjectId = input.subject_id;
   let resolvedSubjectSlug = input.subject_slug;
 
-  if (!isValidUuid(resolvedSubjectId)) {
-    // 1. Try resolving via canonical Semester 1 map
-    const canonicalCode = resolveSubjectIdentifier(resolvedSubjectId);
-    const mapEntry = CANONICAL_SEMESTER_1_MAP.find((m) => m.code === canonicalCode);
-    if (mapEntry?.knownUuids?.[0] && isValidUuid(mapEntry.knownUuids[0])) {
-      resolvedSubjectId = mapEntry.knownUuids[0];
-      if (!resolvedSubjectSlug) {
-        resolvedSubjectSlug = mapEntry.slug;
-      }
-    } else {
-      // 2. Attempt lookup in Supabase subjects table by slug, code, or name
-      const { data: dbSub } = await client
+  const CANONICAL_SEMESTER_DEFS = [
+    {
+      id: '261FY507',
+      uuid: '83daf8a2-62a3-42a3-8149-2e9a5e10cd50',
+      code: '261FY507',
+      name: 'Communication Skills',
+      slug: 'communication-skills',
+      credits: 2,
+      icon: 'MessagesSquare',
+      desc: 'Technical Writing, Business Correspondence, Phonetics & Presentation.',
+      matchers: ['261fy507', '1fy1-05', 'communication-skills', 'communication skills'],
+    },
+    {
+      id: '261FY101',
+      uuid: 'f9e3096c-fb5c-428a-bf63-be6561d204ab',
+      code: '261FY101',
+      name: 'Chemistry',
+      slug: 'chemistry',
+      credits: 4,
+      icon: 'Beaker',
+      desc: 'Water Technology, Fuels, Polymers, Corrosion & Nanomaterials.',
+      matchers: ['261fy101', '1fy2-03', 'chemistry', 'engineering chemistry'],
+    },
+    {
+      id: '261CR104',
+      uuid: 'ea50315f-f2a7-4964-85c8-8eb8e526e51f',
+      code: '261CR104',
+      name: 'BEEE',
+      slug: 'beee',
+      credits: 3,
+      icon: 'Zap',
+      desc: 'Basic Electrical & Electronics Engineering — DC/AC Circuits, Transformers & Diodes.',
+      matchers: ['261cr104', '1fy3-07', 'beee', 'basic electrical & electronics engineering'],
+    },
+    {
+      id: '261FY103',
+      uuid: '7112bf1f-43a4-4ee0-8a90-303de1fb05bc',
+      code: '261FY103',
+      name: 'Mathematics',
+      slug: 'mathematics',
+      credits: 4,
+      icon: 'Calculator',
+      desc: 'Calculus, Matrices, Vector Calculus & Differential Equations.',
+      matchers: ['261fy103', '1fy2-01', 'mathematics', 'engineering mathematics', 'engineering-mathematics'],
+    },
+    {
+      id: '261FY629',
+      uuid: '2d6358b4-e5c5-47f3-bb7e-e6cf5097ed9f',
+      code: '261FY629',
+      name: 'MPWS',
+      slug: 'mpws',
+      credits: 2,
+      icon: 'Wrench',
+      desc: 'Manufacturing Practices Workshop — Fitting, Carpentry, Foundry & Welding.',
+      matchers: ['261fy629', '1fy4-21', 'mpws', 'manufacturing practices workshop'],
+    },
+    {
+      id: '261FY106',
+      uuid: '4d45360f-ab27-4a7b-a63f-89ce15aab471',
+      code: '261FY106',
+      name: 'C Programming',
+      slug: 'c-programming',
+      credits: 3,
+      icon: 'Code2',
+      desc: 'Syntax, Control Flow, Functions, Pointers, Arrays & File Handling.',
+      matchers: ['261fy106', '1fy3-06', 'c-programming', 'programming in c', 'programming-in-c'],
+    },
+    {
+      id: '261FY526',
+      uuid: '26100526-0000-4000-8000-000000000526',
+      code: '261FY526',
+      name: 'Language Lab',
+      slug: 'language-lab',
+      credits: 2,
+      icon: 'Languages',
+      desc: 'Phonetics, Listening Comprehension, Accent Training & Conversational Practice',
+      matchers: ['261fy526', 'language-lab', 'language lab'],
+    },
+    {
+      id: '261CR124',
+      uuid: '26100124-0000-4000-8000-000000000124',
+      code: '261CR124',
+      name: 'WPL',
+      slug: 'wpl',
+      credits: 2,
+      icon: 'Globe',
+      desc: 'Web Programming Lab — HTML5, CSS3, JavaScript Basics, Responsive Design & DOM',
+      matchers: ['261cr124', 'wpl', 'web-programming-lab', 'web programming lab'],
+    },
+    {
+      id: 'design-thinking',
+      uuid: '26100000-0000-4000-8000-000000000009',
+      code: null, // DO NOT INVENT A CODE
+      name: 'Design Thinking',
+      slug: 'design-thinking',
+      credits: 2,
+      icon: 'Lightbulb',
+      desc: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
+      matchers: ['design-thinking', 'design thinking', 'dt'],
+    },
+    {
+      id: 'non-syllabus-project',
+      uuid: '30d211c6-3e3a-47c5-a9ab-cdc4bb89d989', // Existing row in database
+      code: null, // DO NOT INVENT A CODE
+      name: 'Non-Syllabus Project',
+      slug: 'non-syllabus-project',
+      credits: 2,
+      icon: 'FolderKanban',
+      desc: 'Hands-on Project Work, Technical Implementation & Practical Innovation',
+      matchers: ['non-syllabus-project', 'non-syllabus project', 'nsp', '1fy3-08'],
+    },
+  ];
+
+  // Try checking in Supabase subjects table first
+  let targetSubjectRow: any = null;
+
+  if (isValidUuid(resolvedSubjectId)) {
+    const { data: dbSub } = await client
+      .from('subjects')
+      .select('id, slug, code, name')
+      .eq('id', resolvedSubjectId)
+      .maybeSingle();
+    targetSubjectRow = dbSub;
+  }
+
+  if (!targetSubjectRow) {
+    const cleanId = (resolvedSubjectId || '').toLowerCase().trim();
+    const cleanSlug = (resolvedSubjectSlug || '').toLowerCase().trim();
+
+    // Check canonical definition
+    const canonical = CANONICAL_SEMESTER_DEFS.find((c) =>
+      c.uuid === resolvedSubjectId ||
+      c.id.toLowerCase() === cleanId ||
+      c.slug === cleanSlug ||
+      c.matchers.includes(cleanId) ||
+      c.matchers.includes(cleanSlug)
+    );
+
+    if (canonical) {
+      resolvedSubjectSlug = canonical.slug;
+
+      // Look in DB by canonical UUID, code, or slug
+      const { data: foundInDb } = await client
         .from('subjects')
         .select('id, slug, code, name')
-        .or(`slug.eq.${input.subject_id},code.eq.${input.subject_id},name.ilike.${input.subject_id}`)
+        .or(`id.eq.${canonical.uuid},slug.eq.${canonical.slug}${canonical.code ? `,code.eq.${canonical.code}` : ''}`)
         .maybeSingle();
 
-      if (dbSub && dbSub.id && isValidUuid(dbSub.id)) {
-        resolvedSubjectId = dbSub.id;
-        if (!resolvedSubjectSlug) {
-          resolvedSubjectSlug = dbSub.slug || undefined;
-        }
+      if (foundInDb && isValidUuid(foundInDb.id)) {
+        targetSubjectRow = foundInDb;
+        resolvedSubjectId = foundInDb.id;
       } else {
-        throw new Error(
-          `Invalid subject identifier "${input.subject_id}". Expected a valid Supabase subjects.id UUID.`
-        );
+        // Safe insert using authenticated admin session to preserve FK integrity
+        const semId = input.semester_id || '424fcf6e-e43a-457a-b98a-a95a0492ebc8';
+        try {
+          const { data: inserted, error: insErr } = await client
+            .from('subjects')
+            .insert([{
+              id: canonical.uuid,
+              semester_id: semId,
+              code: canonical.code,
+              name: canonical.name,
+              slug: canonical.slug,
+              description: canonical.desc,
+              credits: canonical.credits,
+              icon_name: canonical.icon,
+            }])
+            .select('id, slug, code, name')
+            .maybeSingle();
+
+          if (!insErr && inserted) {
+            targetSubjectRow = inserted;
+            resolvedSubjectId = inserted.id;
+          }
+        } catch {
+          // If insert fails (e.g. race condition or already exists), re-query
+          const { data: retrySub } = await client
+            .from('subjects')
+            .select('id, slug, code, name')
+            .or(`id.eq.${canonical.uuid},slug.eq.${canonical.slug}`)
+            .maybeSingle();
+          if (retrySub) {
+            targetSubjectRow = retrySub;
+            resolvedSubjectId = retrySub.id;
+          }
+        }
       }
     }
+  }
+
+  if (targetSubjectRow && isValidUuid(targetSubjectRow.id)) {
+    resolvedSubjectId = targetSubjectRow.id;
+    if (!resolvedSubjectSlug) {
+      resolvedSubjectSlug = targetSubjectRow.slug || undefined;
+    }
+  } else if (!isValidUuid(resolvedSubjectId)) {
+    throw new Error(
+      `Invalid subject identifier "${input.subject_id}". Expected a valid Supabase subjects.id UUID.`
+    );
   }
 
   // 3. Upload to private Supabase Storage bucket 'materials'
