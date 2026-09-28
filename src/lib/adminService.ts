@@ -181,8 +181,7 @@ export async function adminUploadMaterial(
     },
     {
       id: 'design-thinking',
-      uuid: '26100000-0000-4000-8000-000000000009',
-      code: null, // DO NOT INVENT A CODE
+      code: '', // DO NOT INVENT A CODE — leave empty
       name: 'Design Thinking',
       slug: 'design-thinking',
       credits: 2,
@@ -193,7 +192,7 @@ export async function adminUploadMaterial(
     {
       id: 'non-syllabus-project',
       uuid: '30d211c6-3e3a-47c5-a9ab-cdc4bb89d989', // Existing row in database
-      code: null, // DO NOT INVENT A CODE
+      code: '', // DO NOT INVENT A CODE
       name: 'Non-Syllabus Project',
       slug: 'non-syllabus-project',
       credits: 2,
@@ -215,13 +214,31 @@ export async function adminUploadMaterial(
     targetSubjectRow = dbSub;
   }
 
+  // If not found by direct UUID, search by slug, code, or name
   if (!targetSubjectRow) {
     const cleanId = (resolvedSubjectId || '').toLowerCase().trim();
     const cleanSlug = (resolvedSubjectSlug || '').toLowerCase().trim();
 
-    // Check canonical definition
+    // Query DB by slug or name directly
+    const { data: foundByQuery } = await client
+      .from('subjects')
+      .select('id, slug, code, name')
+      .or(`slug.eq.${cleanSlug || cleanId},slug.eq.${cleanId},name.ilike.${cleanSlug || cleanId}`)
+      .maybeSingle();
+
+    if (foundByQuery && isValidUuid(foundByQuery.id)) {
+      targetSubjectRow = foundByQuery;
+      resolvedSubjectId = foundByQuery.id;
+    }
+  }
+
+  // If still not found, check canonical definition against existing database rows
+  if (!targetSubjectRow) {
+    const cleanId = (resolvedSubjectId || '').toLowerCase().trim();
+    const cleanSlug = (resolvedSubjectSlug || '').toLowerCase().trim();
+
     const canonical = CANONICAL_SEMESTER_DEFS.find((c) =>
-      c.uuid === resolvedSubjectId ||
+      ('uuid' in c && c.uuid === resolvedSubjectId) ||
       c.id.toLowerCase() === cleanId ||
       c.slug === cleanSlug ||
       c.matchers.includes(cleanId) ||
@@ -231,64 +248,35 @@ export async function adminUploadMaterial(
     if (canonical) {
       resolvedSubjectSlug = canonical.slug;
 
-      // Look in DB by canonical UUID, code, or slug
+      // Look in DB by slug, code, or name
+      const orFilter = canonical.code
+        ? `slug.eq.${canonical.slug},code.eq.${canonical.code},name.ilike.${canonical.name}`
+        : `slug.eq.${canonical.slug},name.ilike.${canonical.name}`;
+
       const { data: foundInDb } = await client
         .from('subjects')
         .select('id, slug, code, name')
-        .or(`id.eq.${canonical.uuid},slug.eq.${canonical.slug}${canonical.code ? `,code.eq.${canonical.code}` : ''}`)
+        .or(orFilter)
         .maybeSingle();
 
       if (foundInDb && isValidUuid(foundInDb.id)) {
         targetSubjectRow = foundInDb;
         resolvedSubjectId = foundInDb.id;
-      } else {
-        // Safe insert using authenticated admin session to preserve FK integrity
-        const semId = input.semester_id || '424fcf6e-e43a-457a-b98a-a95a0492ebc8';
-        try {
-          const { data: inserted, error: insErr } = await client
-            .from('subjects')
-            .insert([{
-              id: canonical.uuid,
-              semester_id: semId,
-              code: canonical.code,
-              name: canonical.name,
-              slug: canonical.slug,
-              description: canonical.desc,
-              credits: canonical.credits,
-              icon_name: canonical.icon,
-            }])
-            .select('id, slug, code, name')
-            .maybeSingle();
-
-          if (!insErr && inserted) {
-            targetSubjectRow = inserted;
-            resolvedSubjectId = inserted.id;
-          }
-        } catch {
-          // If insert fails (e.g. race condition or already exists), re-query
-          const { data: retrySub } = await client
-            .from('subjects')
-            .select('id, slug, code, name')
-            .or(`id.eq.${canonical.uuid},slug.eq.${canonical.slug}`)
-            .maybeSingle();
-          if (retrySub) {
-            targetSubjectRow = retrySub;
-            resolvedSubjectId = retrySub.id;
-          }
-        }
       }
     }
   }
 
-  if (targetSubjectRow && isValidUuid(targetSubjectRow.id)) {
-    resolvedSubjectId = targetSubjectRow.id;
-    if (!resolvedSubjectSlug) {
-      resolvedSubjectSlug = targetSubjectRow.slug || undefined;
-    }
-  } else if (!isValidUuid(resolvedSubjectId)) {
+  // Strict Foreign Key Safety: targetSubjectRow MUST be a verified row from public.subjects
+  if (!targetSubjectRow || !isValidUuid(targetSubjectRow.id)) {
     throw new Error(
-      `Invalid subject identifier "${input.subject_id}". Expected a valid Supabase subjects.id UUID.`
+      `Cannot register material: Subject "${input.subject_id}" was not found in the database. Please select a valid subject from the dropdown.`
     );
+  }
+
+  // Guarantee that materials.subject_id receives the authentic public.subjects.id UUID
+  resolvedSubjectId = targetSubjectRow.id;
+  if (!resolvedSubjectSlug) {
+    resolvedSubjectSlug = targetSubjectRow.slug || undefined;
   }
 
   // 3. Upload to private Supabase Storage bucket 'materials'

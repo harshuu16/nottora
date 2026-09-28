@@ -18,6 +18,9 @@ import {
   Layers,
   FileCheck,
   Edit3,
+  Copy,
+  Check,
+  MessageSquare,
 } from 'lucide-react';
 import { MaterialCategory, Subject, DbCollege, DbBranch, DbSemester, DbSubject } from '../types';
 import {
@@ -75,8 +78,8 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
 
-  // Active view tab in admin panel: 'upload' or 'manage'
-  const [activeTab, setActiveTab] = useState<'upload' | 'manage'>('upload');
+  // Active view tab in admin panel: 'upload', 'manage', or 'reports'
+  const [activeTab, setActiveTab] = useState<'upload' | 'manage' | 'reports'>('upload');
 
   // Cascade selector data
   const [colleges, setColleges] = useState<DbCollege[]>([]);
@@ -122,6 +125,14 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
   const [editPublished, setEditPublished] = useState(true);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Problem reports state
+  const [reports, setReports] = useState<any[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [reportsTableMissing, setReportsTableMissing] = useState(false);
+  const [reportActionId, setReportActionId] = useState<string | null>(null);
+  const [reportsFilterStatus, setReportsFilterStatus] = useState<'all' | 'open' | 'resolved'>('all');
+  const [copiedMigrationSql, setCopiedMigrationSql] = useState(false);
 
   // Check initial authentication
   useEffect(() => {
@@ -292,7 +303,6 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       name: 'Design Thinking',
       displayName: 'Design Thinking (DT)',
       slug: 'design-thinking',
-      fallbackUuid: '26100000-0000-4000-8000-000000000009',
       aliases: ['design-thinking', 'design thinking', 'dt'],
     },
     {
@@ -306,94 +316,23 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
     },
   ], []);
 
-  // When admin opens portal, safely ensure missing subjects exist in database
-  useEffect(() => {
-    if (!adminUser || !isOpen) return;
 
-    const syncMissingSubjects = async () => {
-      const client = getSupabase();
-      if (!client) return;
-      try {
-        const { data: existing } = await client
-          .from('subjects')
-          .select('id, code, name, slug');
-
-        const existingSlugs = new Set((existing || []).map((s: any) => s.slug?.toLowerCase()));
-        const existingCodes = new Set((existing || []).map((s: any) => s.code?.toLowerCase()).filter(Boolean));
-        const existingNames = new Set((existing || []).map((s: any) => s.name?.toLowerCase()));
-
-        const semesterId = '424fcf6e-e43a-457a-b98a-a95a0492ebc8';
-        let didInsert = false;
-
-        // Language Lab
-        if (!existingSlugs.has('language-lab') && !existingCodes.has('261fy526') && !existingNames.has('language lab')) {
-          const { error } = await client.from('subjects').insert([{
-            id: '26100526-0000-4000-8000-000000000526',
-            semester_id: semesterId,
-            code: '261FY526',
-            name: 'Language Lab',
-            slug: 'language-lab',
-            description: 'Phonetics, Listening Comprehension, Accent Training & Conversational Practice',
-            credits: 2,
-            icon_name: 'Languages',
-          }]);
-          if (!error) didInsert = true;
-        }
-
-        // WPL
-        if (!existingSlugs.has('wpl') && !existingCodes.has('261cr124') && !existingNames.has('wpl') && !existingNames.has('web programming lab')) {
-          const { error } = await client.from('subjects').insert([{
-            id: '26100124-0000-4000-8000-000000000124',
-            semester_id: semesterId,
-            code: '261CR124',
-            name: 'WPL',
-            slug: 'wpl',
-            description: 'Web Programming Lab — HTML5, CSS3, JavaScript Basics, Responsive Design & DOM',
-            credits: 2,
-            icon_name: 'Globe',
-          }]);
-          if (!error) didInsert = true;
-        }
-
-        // Design Thinking (DO NOT INVENT A CODE)
-        if (!existingSlugs.has('design-thinking') && !existingNames.has('design thinking')) {
-          const { error } = await client.from('subjects').insert([{
-            id: '26100000-0000-4000-8000-000000000009',
-            semester_id: semesterId,
-            code: null,
-            name: 'Design Thinking',
-            slug: 'design-thinking',
-            description: 'Human-Centered Design, Empathy Mapping, Problem Definition, Ideation & Iterative Prototyping',
-            credits: 2,
-            icon_name: 'Lightbulb',
-          }]);
-          if (!error) didInsert = true;
-        }
-
-        if (didInsert) {
-          const { data: refreshed } = await client
-            .from('subjects')
-            .select('id, name, code, slug, semester_id, credits, icon_name')
-            .order('name', { ascending: true });
-          if (refreshed && refreshed.length > 0) {
-            setDbSubjects(refreshed as DbSubject[]);
-          }
-        }
-      } catch (err) {
-        console.warn('[Admin Portal subject sync notice]', err);
-      }
-    };
-
-    syncMissingSubjects();
-  }, [adminUser, isOpen]);
-
-  // Compute availableSubjectOptions: guarantees all 10 Semester 1 subjects in canonical order
+  // Compute availableSubjectOptions: guarantees all 10 Semester 1 subjects mapped to authentic public.subjects.id
   const availableSubjectOptions = useMemo(() => {
     if (selectedSemesterNumber === 1) {
-      return CANONICAL_SEMESTER_1_ADMIN_SUBJECTS.map((canonical) => {
-        // Link to authentic dbSubjects row if loaded
+      const options: Array<{
+        id: string; // The authentic public.subjects.id UUID
+        uuid: string;
+        slug: string;
+        name: string;
+        displayName: string;
+        code: string;
+        shortName: string;
+      }> = [];
+
+      // Link each canonical subject to authentic dbSubjects row
+      for (const canonical of CANONICAL_SEMESTER_1_ADMIN_SUBJECTS) {
         const dbMatch = dbSubjects.find((dbs) => {
-          if (dbs.id === canonical.fallbackUuid) return true;
           if (dbs.slug && dbs.slug.toLowerCase() === canonical.slug.toLowerCase()) return true;
           if (canonical.code && dbs.code && dbs.code.toLowerCase() === canonical.code.toLowerCase()) return true;
           const lowerName = dbs.name?.toLowerCase() || '';
@@ -405,18 +344,42 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
           );
         });
 
-        const activeUuid = dbMatch && isValidUuid(dbMatch.id) ? dbMatch.id : canonical.fallbackUuid;
+        // ONLY include options that have a genuine public.subjects.id from Supabase
+        if (dbMatch && isValidUuid(dbMatch.id)) {
+          options.push({
+            id: dbMatch.id, // REAL UUID from public.subjects.id
+            uuid: dbMatch.id,
+            slug: dbMatch.slug || canonical.slug,
+            name: canonical.name,
+            displayName: canonical.displayName,
+            code: dbMatch.code || canonical.code || '',
+            shortName: canonical.name,
+          });
+        }
+      }
 
-        return {
-          id: activeUuid,
-          uuid: activeUuid,
-          slug: dbMatch?.slug || canonical.slug,
-          name: canonical.name,
-          displayName: canonical.displayName,
-          code: canonical.code || dbMatch?.code || '',
-          shortName: canonical.name,
-        };
-      });
+      // If any DB subjects belong to Semester 1 but weren't in canonical list, include them as well
+      const semObj = semesters.find((s) => s.semester_number === 1);
+      if (semObj) {
+        for (const dbs of dbSubjects) {
+          if (dbs.semester_id === semObj.id && !options.some((o) => o.id === dbs.id)) {
+            if (dbs.slug === 'engineering-physics' || dbs.name.toLowerCase() === 'engineering physics') {
+              continue;
+            }
+            options.push({
+              id: dbs.id,
+              uuid: dbs.id,
+              slug: dbs.slug || dbs.id,
+              name: dbs.name,
+              displayName: dbs.code ? `${dbs.name} (${dbs.code})` : dbs.name,
+              code: dbs.code || '',
+              shortName: dbs.name,
+            });
+          }
+        }
+      }
+
+      return options;
     }
 
     // Other semesters fallback (if any exist in database)
@@ -429,7 +392,7 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       slug: dbs.slug || dbs.id,
       name: dbs.name,
       displayName: dbs.code ? `${dbs.name} (${dbs.code})` : dbs.name,
-      code: dbs.code,
+      code: dbs.code || '',
       shortName: dbs.name,
     }));
   }, [selectedSemesterNumber, CANONICAL_SEMESTER_1_ADMIN_SUBJECTS, dbSubjects, semesters]);
@@ -452,22 +415,16 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       return { uuid: matchByUuid.id, slug: matchByUuid.slug || inputVal, name: matchByUuid.name };
     }
 
-    // 3. Match in canonical list
-    const canonicalMatch = CANONICAL_SEMESTER_1_ADMIN_SUBJECTS.find(
-      (c) => c.fallbackUuid === inputVal || c.slug === inputVal || c.id === inputVal || (c.code && c.code.toLowerCase() === inputVal.toLowerCase()) || c.aliases.includes(inputVal.toLowerCase())
+    // 3. Match in dbSubjects by slug, code, or name
+    const matchByMeta = dbSubjects.find(
+      (s) => s.slug === inputVal || (s.code && s.code.toLowerCase() === inputVal.toLowerCase()) || s.name.toLowerCase() === inputVal.toLowerCase()
     );
-    if (canonicalMatch) {
-      const dbMatch = dbSubjects.find((dbs) => dbs.id === canonicalMatch.fallbackUuid || dbs.slug === canonicalMatch.slug);
-      const uuid = dbMatch && isValidUuid(dbMatch.id) ? dbMatch.id : canonicalMatch.fallbackUuid;
-      return { uuid, slug: canonicalMatch.slug, name: canonicalMatch.name };
-    }
-
-    if (isValidUuid(inputVal)) {
-      return { uuid: inputVal, slug: inputVal, name: 'Selected Subject' };
+    if (matchByMeta && isValidUuid(matchByMeta.id)) {
+      return { uuid: matchByMeta.id, slug: matchByMeta.slug || inputVal, name: matchByMeta.name };
     }
 
     return null;
-  }, [availableSubjectOptions, dbSubjects, CANONICAL_SEMESTER_1_ADMIN_SUBJECTS]);
+  }, [availableSubjectOptions, dbSubjects]);
 
   // Set default subject and synchronize selectedSubjectId so it is always a valid database UUID
   useEffect(() => {
@@ -478,11 +435,13 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       return;
     }
 
-    // If current selectedSubjectId is not a valid UUID (e.g. it was initialized to the slug "engineering-mathematics"):
-    if (!isValidUuid(selectedSubjectId)) {
+    const currentMatches = availableSubjectOptions.some((s) => s.id === selectedSubjectId);
+    if (!currentMatches) {
       const resolved = getSubjectDatabaseUuid(selectedSubjectId);
-      if (resolved && isValidUuid(resolved.uuid)) {
+      if (resolved && isValidUuid(resolved.uuid) && availableSubjectOptions.some((s) => s.id === resolved.uuid)) {
         setSelectedSubjectId(resolved.uuid);
+      } else if (availableSubjectOptions.length > 0) {
+        setSelectedSubjectId(availableSubjectOptions[0].id);
       }
     }
   }, [selectedSubjectId, availableSubjectOptions, getSubjectDatabaseUuid]);
@@ -506,6 +465,89 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       loadMaterials();
     }
   }, [isOpen, adminUser, activeTab, loadMaterials]);
+
+  // Load student problem reports
+  const loadReports = useCallback(async () => {
+    const client = getSupabase();
+    if (!client) return;
+    setIsLoadingReports(true);
+    try {
+      const { data, error } = await client
+        .from('problem_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setReports(data);
+        setReportsTableMissing(false);
+      } else if (error) {
+        const isMissingTable =
+          error.code === 'PGRST205' ||
+          error.code === '42P01' ||
+          error.message.toLowerCase().includes('schema cache') ||
+          error.message.toLowerCase().includes('relation') ||
+          error.message.toLowerCase().includes('does not exist');
+
+        if (isMissingTable) {
+          setReportsTableMissing(true);
+          try {
+            const localSaved = JSON.parse(localStorage.getItem('nottora_problem_reports') || '[]');
+            setReports(localSaved);
+          } catch {
+            setReports([]);
+          }
+        }
+      }
+    } catch {
+      //
+    } finally {
+      setIsLoadingReports(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && adminUser && activeTab === 'reports') {
+      loadReports();
+    }
+  }, [isOpen, adminUser, activeTab, loadReports]);
+
+  // Toggle report status
+  const handleToggleReportStatus = async (reportId: string, currentStatus: string) => {
+    const client = getSupabase();
+    if (!client) return;
+    setReportActionId(reportId);
+    try {
+      const nextStatus = currentStatus === 'open' ? 'resolved' : 'open';
+      const { error } = await client
+        .from('problem_reports')
+        .update({ status: nextStatus })
+        .eq('id', reportId);
+
+      if (!error) {
+        setReports((prev) =>
+          prev.map((r) => (r.id === reportId ? { ...r, status: nextStatus } : r))
+        );
+      } else {
+        // Also update local copy if offline
+        try {
+          const localSaved = JSON.parse(localStorage.getItem('nottora_problem_reports') || '[]');
+          const updated = localSaved.map((r: any) =>
+            r.id === reportId ? { ...r, status: nextStatus } : r
+          );
+          localStorage.setItem('nottora_problem_reports', JSON.stringify(updated));
+          setReports((prev) =>
+            prev.map((r) => (r.id === reportId ? { ...r, status: nextStatus } : r))
+          );
+        } catch {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.warn('[Update Report Status Error]', err);
+    } finally {
+      setReportActionId(null);
+    }
+  };
 
   // Login handler
   const handleLogin = async (e: React.FormEvent) => {
@@ -975,6 +1017,23 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
                   >
                     <Layers className="w-3.5 h-3.5 text-[#C2410C]" />
                     <span>Manage Materials ({adminMaterials.length})</span>
+                  </button>
+
+                  <button
+                    id="tab-problem-reports-btn"
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('reports');
+                      loadReports();
+                    }}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      activeTab === 'reports'
+                        ? 'bg-[#FFFFFF] text-[#1C1917] shadow-xs font-semibold'
+                        : 'text-[#57534E] hover:text-[#1C1917]'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-[#C2410C]" />
+                    <span>Problem Reports ({reports.length})</span>
                   </button>
                 </div>
               </div>
@@ -1452,6 +1511,254 @@ WHERE email = 'YOUR_EMAIL_HERE';`}
                                 </td>
                               </tr>
                             ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: STUDENT PROBLEM REPORTS */}
+              {activeTab === 'reports' && (
+                <div className="space-y-4">
+                  {/* Reports Header & Filter Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] p-4 rounded-2xl border border-[#EAE5DA] shadow-xs">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
+                        Student Problem Reports
+                      </h3>
+                      <p className="text-[11px] text-[#78716C] mt-0.5">
+                        Inspect student feedback, broken links, missing materials, and suggestions
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 flex-wrap text-xs">
+                      <span className="text-[#78716C] font-medium">Filter:</span>
+                      <select
+                        value={reportsFilterStatus}
+                        onChange={(e) => setReportsFilterStatus(e.target.value as any)}
+                        className="px-2.5 py-1.5 bg-[#FAF8F5] border border-[#E0D9CC] rounded-lg text-xs text-[#1C1917]"
+                      >
+                        <option value="all">All Statuses ({reports.length})</option>
+                        <option value="open">
+                          Open ({reports.filter((r) => r.status === 'open').length})
+                        </option>
+                        <option value="resolved">
+                          Resolved ({reports.filter((r) => r.status === 'resolved').length})
+                        </option>
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={loadReports}
+                        disabled={isLoadingReports}
+                        className="px-2.5 py-1.5 bg-[#FAF8F5] hover:bg-[#F2EFE9] border border-[#E0D9CC] rounded-lg text-xs text-[#57534E] flex items-center gap-1.5 transition-colors"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isLoadingReports ? 'animate-spin' : ''}`} />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Missing table migration banner */}
+                  {reportsTableMissing && (
+                    <div className="p-4 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] space-y-3">
+                      <div className="flex items-start gap-2.5 text-xs text-[#92400E]">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#D97706]" />
+                        <div className="space-y-1">
+                          <p className="font-semibold text-[#78350F]">
+                            Database Setup Notice: public.problem_reports Table Needed
+                          </p>
+                          <p className="text-[#92400E] leading-relaxed">
+                            The Supabase table <code className="px-1 py-0.5 bg-[#FEF3C7] rounded font-mono text-[11px]">public.problem_reports</code> has not yet been executed in your database, or the schema cache needs reloading. Student reports are temporarily saved safely in local storage so no feedback is lost.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sql = `-- Run in Supabase SQL Editor
+CREATE TABLE IF NOT EXISTS public.problem_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    problem_type TEXT NOT NULL,
+    description TEXT NOT NULL,
+    page_url TEXT,
+    route TEXT,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    email TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_problem_reports_status ON public.problem_reports(status);
+CREATE INDEX IF NOT EXISTS idx_problem_reports_created_at ON public.problem_reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_problem_reports_user_id ON public.problem_reports(user_id);
+
+ALTER TABLE public.problem_reports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can submit problem reports" ON public.problem_reports;
+CREATE POLICY "Public can submit problem reports"
+    ON public.problem_reports FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can view own problem reports" ON public.problem_reports;
+CREATE POLICY "Users can view own problem reports"
+    ON public.problem_reports FOR SELECT
+    TO authenticated
+    USING (user_id IS NOT NULL AND auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admin manage problem reports" ON public.problem_reports;
+CREATE POLICY "Admin manage problem reports"
+    ON public.problem_reports FOR ALL
+    TO authenticated
+    USING (public.is_admin())
+    WITH CHECK (public.is_admin());
+
+GRANT SELECT, INSERT ON public.problem_reports TO anon, authenticated;
+GRANT ALL ON public.problem_reports TO authenticated;
+
+NOTIFY pgrst, 'reload schema';`;
+                            navigator.clipboard.writeText(sql);
+                            setCopiedMigrationSql(true);
+                            setTimeout(() => setCopiedMigrationSql(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#D97706] hover:bg-[#B45309] text-[#FFFFFF] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          {copiedMigrationSql ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-[#FFFFFF]" />
+                              <span>SQL Copied to Clipboard!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy Table Migration SQL</span>
+                            </>
+                          )}
+                        </button>
+                        <span className="text-[11px] text-[#A16207]">
+                          Paste into Supabase Dashboard → SQL Editor
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reports List / Table */}
+                  {reports.length === 0 ? (
+                    <div className="bg-[#FFFFFF] p-8 text-center rounded-2xl border border-[#EAE5DA] text-xs text-[#78716C] space-y-2">
+                      <MessageSquare className="w-8 h-8 mx-auto text-[#A8A29E]" />
+                      <p className="font-semibold text-[#1C1917]">No problem reports yet</p>
+                      <p className="text-[11px]">
+                        When students report an issue or suggest a missing resource via the footer "Report a Problem" modal, their submissions will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-[#FFFFFF] rounded-2xl border border-[#EAE5DA] shadow-xs overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-[#1C1917]">
+                          <thead className="bg-[#FAF8F5] border-b border-[#EAE5DA] text-[11px] font-semibold text-[#78716C] uppercase tracking-wider">
+                            <tr>
+                              <th className="py-2.5 px-4">Status</th>
+                              <th className="py-2.5 px-3">Type</th>
+                              <th className="py-2.5 px-4">Description</th>
+                              <th className="py-2.5 px-3">Page / Context</th>
+                              <th className="py-2.5 px-3">Contact</th>
+                              <th className="py-2.5 px-3">Submitted</th>
+                              <th className="py-2.5 px-4 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#EAE5DA]">
+                            {reports
+                              .filter((r) =>
+                                reportsFilterStatus === 'all' ? true : r.status === reportsFilterStatus
+                              )
+                              .map((report) => (
+                                <tr
+                                  key={report.id}
+                                  className="hover:bg-[#FAF8F5] transition-colors"
+                                >
+                                  {/* Status */}
+                                  <td className="py-3 px-4 whitespace-nowrap">
+                                    {report.status === 'resolved' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#DCFCE7] text-[#15803D]">
+                                        <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
+                                        Resolved
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#B45309]">
+                                        <AlertCircle className="w-3 h-3 text-[#F59E0B]" />
+                                        Open
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Problem Type */}
+                                  <td className="py-3 px-3 whitespace-nowrap">
+                                    <span className="capitalize text-[11px] px-2 py-0.5 rounded-md bg-[#F4F1EA] text-[#44403C] border border-[#E5E0D5]">
+                                      {report.problem_type ? report.problem_type.replace(/_/g, ' ') : 'General'}
+                                    </span>
+                                  </td>
+
+                                  {/* Description */}
+                                  <td className="py-3 px-4 max-w-xs sm:max-w-md">
+                                    <p className="text-xs text-[#1C1917] whitespace-pre-wrap leading-relaxed">
+                                      {report.description}
+                                    </p>
+                                  </td>
+
+                                  {/* Page / Context */}
+                                  <td className="py-3 px-3 text-[11px] text-[#78716C] max-w-[150px] truncate">
+                                    {report.route || report.page_url ? (
+                                      <span title={report.page_url || report.route} className="font-mono">
+                                        {report.route || report.page_url}
+                                      </span>
+                                    ) : (
+                                      <span className="italic text-[#A8A29E]">Not specified</span>
+                                    )}
+                                  </td>
+
+                                  {/* Reporter Contact */}
+                                  <td className="py-3 px-3 whitespace-nowrap text-[11px]">
+                                    {report.email ? (
+                                      <span className="text-[#1C1917] font-medium">{report.email}</span>
+                                    ) : (
+                                      <span className="italic text-[#A8A29E]">Anonymous</span>
+                                    )}
+                                  </td>
+
+                                  {/* Date */}
+                                  <td className="py-3 px-3 whitespace-nowrap text-[11px] text-[#78716C]">
+                                    {report.created_at
+                                      ? new Date(report.created_at).toLocaleDateString(undefined, {
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })
+                                      : 'Recently'}
+                                  </td>
+
+                                  {/* Action: Toggle Resolved / Open */}
+                                  <td className="py-3 px-4 text-right whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      disabled={reportActionId === report.id}
+                                      onClick={() => handleToggleReportStatus(report.id, report.status || 'open')}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                        report.status === 'resolved'
+                                          ? 'bg-[#F2EFE9] text-[#57534E] hover:bg-[#EAE5DA]'
+                                          : 'bg-[#DCFCE7] text-[#15803D] hover:bg-[#BBF7D0]'
+                                      }`}
+                                    >
+                                      {report.status === 'resolved' ? 'Mark Open' : 'Mark Resolved'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
                           </tbody>
                         </table>
                       </div>

@@ -1312,7 +1312,7 @@ export async function submitProblemReport(input: {
 }): Promise<{ success: boolean; error?: string; savedOffline?: boolean }> {
   const client = getSupabase();
 
-  const reportPayload = {
+  const reportPayload: Record<string, any> = {
     problem_type: input.problemType,
     description: input.description.trim(),
     page_url: input.pageUrl || (typeof window !== 'undefined' ? window.location.href : null),
@@ -1343,21 +1343,36 @@ export async function submitProblemReport(input: {
   }
 
   try {
+    // If authenticated user is present, attach user_id
+    try {
+      const { data: authData } = await client.auth.getUser();
+      if (authData?.user?.id) {
+        reportPayload.user_id = authData.user.id;
+      }
+    } catch {
+      // anonymous student submission
+    }
+
     const { error } = await client
       .from('problem_reports')
       .insert([reportPayload]);
 
     if (error) {
       console.warn('[Supabase Problem Report Notice]:', error.message);
-      // If table doesn't exist yet, preserve report locally and keep user experience smooth
-      if (
+      const isMissingTable =
+        error.code === 'PGRST205' ||
         error.code === '42P01' ||
+        error.message.toLowerCase().includes('schema cache') ||
         error.message.toLowerCase().includes('relation') ||
-        error.message.toLowerCase().includes('not found') ||
-        error.message.toLowerCase().includes('does not exist')
-      ) {
+        error.message.toLowerCase().includes('does not exist');
+
+      if (isMissingTable) {
         saveOfflineReport();
-        return { success: true, savedOffline: true };
+        return {
+          success: false,
+          error: "Table 'public.problem_reports' is not yet created in your Supabase database. Please run the SQL migration (supabase/fix_production_issues.sql) in your Supabase SQL Editor.",
+          savedOffline: true,
+        };
       }
       return { success: false, error: error.message };
     }
@@ -1366,6 +1381,6 @@ export async function submitProblemReport(input: {
   } catch (err: any) {
     console.error('[Supabase Problem Report Exception]:', err);
     saveOfflineReport();
-    return { success: true, savedOffline: true };
+    return { success: false, error: err?.message || 'Failed to submit report. Please try again.' };
   }
 }
