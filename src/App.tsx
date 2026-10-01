@@ -42,6 +42,7 @@ import {
   safeGoBack,
   findSubjectByIdentifier
 } from './lib/router';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   // Theme management & synchronization
@@ -758,6 +759,9 @@ export default function App() {
 
       {/* Toast Feedback Messages */}
       <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
+      
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
