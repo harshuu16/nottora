@@ -63,7 +63,7 @@ export const Hero: React.FC<HeroProps> = ({
           <span className="text-[#A8A29E]">/</span>
           <span>{context.branchCode}</span>
           <span className="text-[#A8A29E]">/</span>
-          <span className="text-[#C2410C] font-semibold">Semester {context.semester}</span>
+          <span className="text-[#C2410C] font-semibold">Year {context.year} · Sem {context.semester}</span>
           <span className="text-[#A8A29E]">/</span>
           <span className="font-mono text-[#78716C]">{context.session || ACADEMIC_SESSION_DISPLAY}</span>
           <SlidersHorizontal className="w-3 h-3 text-[#A8A29E] group-hover:text-[#C2410C] ml-1 transition-colors" />

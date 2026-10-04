@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Clock, ArrowRight } from 'lucide-react';
-import { Material, MaterialCategory } from '../types';
+import { Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { AcademicContext, Material, MaterialCategory } from '../types';
 import { MaterialCard } from './MaterialCard';
 
 interface RecentMaterialsProps {
@@ -10,6 +10,7 @@ interface RecentMaterialsProps {
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
   onViewAllMaterials?: () => void;
+  context: AcademicContext;
 }
 
 export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
@@ -19,6 +20,7 @@ export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
   bookmarkedIds,
   onToggleBookmark,
   onViewAllMaterials,
+  context,
 }) => {
   const [activeFilter, setActiveFilter] = useState<'all' | MaterialCategory>('all');
 
@@ -36,7 +38,9 @@ export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
               Fresh Archives
             </span>
             <span className="text-xs text-[#A8A29E]">·</span>
-            <span className="text-xs text-[#78716C]">Verified Semester 1 Files</span>
+            <span className="text-xs text-[#78716C]">
+              {context.branchCode} · Year {context.year} · Sem {context.semester}
+            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold font-editorial text-[#1C1917] tracking-tight">
             Recently Added
@@ -88,20 +92,33 @@ export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
             />
           ))}
         </div>
+      ) : materials.length === 0 ? (
+        <div className="p-8 sm:p-10 text-center bg-[#FFFFFF] rounded-2xl border border-[#EBE7DF]">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F5F2EB] border border-[#E6E1D6] text-[11px] font-semibold text-[#78716C] mb-2">
+            <Sparkles className="w-3 h-3 text-[#C2410C]" />
+            <span>Coming Soon</span>
+          </div>
+          <h3 className="text-base font-bold font-editorial text-[#1C1917] mb-1">
+            No recent materials available yet
+          </h3>
+          <p className="text-xs text-[#78716C] max-w-md mx-auto">
+            Materials for {context.branchCode} (Year {context.year}, Semester {context.semester}) have not been uploaded yet.
+          </p>
+        </div>
       ) : (
         <div className="p-8 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">
           <p className="text-xs text-[#78716C]">No recent materials found in this category.</p>
         </div>
       )}
 
-      {onViewAllMaterials && (
+      {materials.length > 0 && onViewAllMaterials && (
         <div className="mt-6 text-center">
           <button
             type="button"
             onClick={onViewAllMaterials}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-[#44403C] hover:text-[#C2410C] bg-[#FFFFFF] hover:bg-[#FAF7F2] border border-[#E2DDD3] shadow-xs transition-all cursor-pointer"
           >
-            <span>Explore all 8 subjects in archive</span>
+            <span>Explore all subjects in archive</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

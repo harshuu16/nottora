@@ -9,10 +9,10 @@ import {
   resolveSubjectIdentifier
 } from './data/academicData';
 import { 
-  fetchAcademicHierarchy,
   fetchSubjects, 
   fetchMaterials, 
-  triggerFileDownload 
+  triggerFileDownload,
+  isCseYear1Sem1
 } from './lib/supabase';
 
 import { Header } from './components/Header';
@@ -43,16 +43,39 @@ import {
   findSubjectByIdentifier
 } from './lib/router';
 
+const SAVED_CONTEXT_STORAGE_KEY = 'nottora_academic_context';
+
+const getInitialSavedContext = (): AcademicContext => {
+  try {
+    const saved = localStorage.getItem(SAVED_CONTEXT_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.branchCode && parsed.year !== undefined && parsed.semester !== undefined) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return CURRENT_CONTEXT;
+};
+
 export default function App() {
   // Theme management & synchronization
   useTheme();
 
-  // Academic hierarchy context
-  const [context, setContext] = useState<AcademicContext>(CURRENT_CONTEXT);
+  // Academic hierarchy context (restored from localStorage if previously chosen)
+  const [context, setContext] = useState<AcademicContext>(getInitialSavedContext);
 
-  // Dynamic Subjects & Materials loaded from Supabase backend (with graceful local fallback)
-  const [subjects, setSubjects] = useState<Subject[]>(DEFAULT_SUBJECTS);
-  const [materials, setMaterials] = useState<Material[]>(DEFAULT_MATERIALS);
+  // Dynamic Subjects & Materials loaded from Supabase backend (with strict hierarchy isolation)
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    const initialCtx = getInitialSavedContext();
+    return isCseYear1Sem1(initialCtx) ? DEFAULT_SUBJECTS : [];
+  });
+  const [materials, setMaterials] = useState<Material[]>(() => {
+    const initialCtx = getInitialSavedContext();
+    return isCseYear1Sem1(initialCtx) ? DEFAULT_MATERIALS : [];
+  });
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(false);
 
   // Navigation View Mode (synced with browser URL and history stack)
@@ -92,38 +115,43 @@ export default function App() {
   // Report a Problem Modal State
   const [isReportProblemOpen, setIsReportProblemOpen] = useState<boolean>(false);
 
-  // Reusable loader for live academic subjects and materials from Supabase
-  const refreshAcademicData = useCallback(async () => {
+  // Reusable loader for live academic subjects and materials from Supabase matching active hierarchy
+  const refreshAcademicData = useCallback(async (targetContext?: AcademicContext) => {
+    const activeCtx = targetContext || context;
     setIsLoadingBackend(true);
     try {
-      const [hierarchy, dbSubs, dbMats] = await Promise.all([
-        fetchAcademicHierarchy(),
-        fetchSubjects(),
-        fetchMaterials(),
+      const [dbSubs, dbMats] = await Promise.all([
+        fetchSubjects({
+          collegeCode: activeCtx.collegeShort,
+          collegeName: activeCtx.college,
+          branchCode: activeCtx.branchCode,
+          branchName: activeCtx.branch,
+          year: activeCtx.year,
+          semester: activeCtx.semester,
+        }),
+        fetchMaterials({
+          hierarchy: activeCtx,
+        }),
       ]);
-      if (hierarchy && hierarchy.college && hierarchy.branch && hierarchy.semester) {
-        setContext({
-          college: hierarchy.college.name,
-          collegeShort: hierarchy.college.code,
-          branch: hierarchy.branch.name,
-          branchCode: hierarchy.branch.code,
-          year: hierarchy.semester.year_number,
-          semester: hierarchy.semester.semester_number,
-          session: ACADEMIC_SESSION_DISPLAY,
-        });
-      }
-      if (dbSubs && dbSubs.length > 0) setSubjects(dbSubs);
-      if (dbMats) setMaterials(dbMats);
+
+      setSubjects(dbSubs || []);
+      setMaterials(dbMats || []);
     } catch (err) {
       console.warn('[Supabase loading notice]', err);
+      if (!isCseYear1Sem1(activeCtx)) {
+        setSubjects([]);
+        setMaterials([]);
+      }
     } finally {
       setIsLoadingBackend(false);
     }
-  }, []);
+  }, [context]);
 
+  // Initial load: fetch content for the saved/initial context
   useEffect(() => {
-    refreshAcademicData();
-  }, [refreshAcademicData]);
+    const initialCtx = getInitialSavedContext();
+    refreshAcademicData(initialCtx);
+  }, []);
 
   // Persist bookmarks
   useEffect(() => {
@@ -245,6 +273,44 @@ export default function App() {
   const handleDismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
+
+  // Save updated academic context, immediately clear old content, and fetch new cohort data
+  const handleSaveContext = useCallback(async (newCtx: AcademicContext) => {
+    setContext(newCtx);
+    try {
+      localStorage.setItem(SAVED_CONTEXT_STORAGE_KEY, JSON.stringify(newCtx));
+    } catch {
+      // ignore
+    }
+
+    // 1. Clear old displayed content IMMEDIATELY
+    setSubjects([]);
+    setMaterials([]);
+    setActiveMaterial(null);
+    setIsPdfViewerOpen(false);
+
+    // If currently on a subject page, navigate home to avoid showing stale subject
+    if (view.type === 'subject') {
+      setView({ type: 'home' });
+      replaceRoute({
+        view: { type: 'home' },
+        materialId: null,
+        isPdfViewerOpen: false,
+        isSearchOpen: false,
+        isAdminOpen: false,
+        internalStep: (window.history.state?.internalStep || 0) + 1,
+      }, '/');
+    }
+
+    addToast(
+      'info',
+      'Academic Context Updated',
+      `Active Cohort: ${newCtx.collegeShort} · ${newCtx.branchCode} · Year ${newCtx.year} · Sem ${newCtx.semester}`
+    );
+
+    // 2. Fetch content strictly for the newly selected hierarchy
+    await refreshAcademicData(newCtx);
+  }, [view, refreshAcademicData, addToast]);
 
   // Toggle Bookmark
   const handleToggleBookmark = (id: string) => {
@@ -635,11 +701,13 @@ export default function App() {
               materialsCounts={categoryCounts}
             />
 
-            {/* Subjects Section (All 8 Subjects) */}
+            {/* Subjects Section (Syllabus Structure) */}
             <div className="mb-14">
               <SubjectGrid
                 subjects={enrichedSubjects}
                 onSelectSubject={(id) => handleSelectSubject(id)}
+                context={context}
+                onOpenContextModal={() => setIsContextModalOpen(true)}
               />
             </div>
 
@@ -651,6 +719,7 @@ export default function App() {
               bookmarkedIds={bookmarkedIds}
               onToggleBookmark={handleToggleBookmark}
               onViewAllMaterials={handleNavigateSubjects}
+              context={context}
             />
 
             {/* Study Motivation / Focus Section */}
@@ -683,6 +752,8 @@ export default function App() {
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
+            context={context}
+            onOpenContextModal={() => setIsContextModalOpen(true)}
           />
         )}
       </main>
@@ -716,6 +787,7 @@ export default function App() {
         onOpenMaterial={handleOpenMaterial}
         onSelectSubject={(id) => handleSelectSubject(id)}
         initialQuery={searchModalInitialQuery}
+        context={context}
       />
 
       {/* Study Stash / Bookmarks Drawer */}
@@ -734,10 +806,7 @@ export default function App() {
         isOpen={isContextModalOpen}
         onClose={() => setIsContextModalOpen(false)}
         currentContext={context}
-        onSaveContext={(newCtx) => {
-          setContext(newCtx);
-          addToast('info', 'Academic Context Updated', `Active Cohort: ${newCtx.collegeShort} · ${newCtx.branchCode} · Sem ${newCtx.semester} · ${newCtx.session || ACADEMIC_SESSION_DISPLAY}`);
-        }}
+        onSaveContext={handleSaveContext}
       />
 
       {/* Report a Problem Modal */}
@@ -753,7 +822,7 @@ export default function App() {
         isOpen={isAdminPortalOpen}
         onClose={handleCloseAdminPortal}
         subjects={enrichedSubjects}
-        onMaterialsUpdated={refreshAcademicData}
+        onMaterialsUpdated={() => refreshAcademicData(context)}
       />
 
       {/* Toast Feedback Messages */}

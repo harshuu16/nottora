@@ -51,12 +51,11 @@ export const Header: React.FC<HeaderProps> = ({
             id="brand-logo-btn"
             type="button"
             onClick={onNavigateHome}
-            className="flex items-center gap-1.5 text-left group cursor-pointer"
+            className="flex items-center text-left group cursor-pointer"
           >
             <span className="font-editorial text-2xl font-bold tracking-tight text-[#1C1917] group-hover:text-[#C2410C] transition-colors">
               Nottora
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C] mb-2" />
           </button>
 
           {/* Academic Context Switcher Badge */}
@@ -69,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <span className="font-semibold text-[#1C1917]">{context.branchCode}</span>
             <span className="text-[#A8A29E]">·</span>
-            <span>Sem {context.semester}</span>
+            <span>Year {context.year} · Sem {context.semester}</span>
             <span className="text-[#A8A29E]">·</span>
             <span className="font-mono text-[11px] text-[#78716C]">{context.session || ACADEMIC_SESSION_DISPLAY}</span>
             <ChevronDown className="w-3 h-3 text-[#78716C]" />
@@ -183,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Academic Cohort
               </div>
               <div className="text-xs font-bold text-[#1C1917]">
-                {context.collegeShort} · {context.branchCode} · Sem {context.semester} · {context.session || ACADEMIC_SESSION_DISPLAY}
+                {context.collegeShort} · {context.branchCode} · Year {context.year} · Sem {context.semester} · {context.session || ACADEMIC_SESSION_DISPLAY}
               </div>
             </div>
             <button

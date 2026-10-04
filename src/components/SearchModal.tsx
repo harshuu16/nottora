@@ -11,7 +11,7 @@ import {
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
-import { Material, Subject, MaterialCategory } from '../types';
+import { Material, Subject, MaterialCategory, AcademicContext } from '../types';
 import { searchMaterialsDb, isSupabaseConfigured } from '../lib/supabase';
 
 interface SearchModalProps {
@@ -22,6 +22,7 @@ interface SearchModalProps {
   onOpenMaterial: (material: Material) => void;
   onSelectSubject: (subjectId: string) => void;
   initialQuery?: string;
+  context?: AcademicContext;
 }
 
 const SAMPLE_SEARCHES = [
@@ -43,6 +44,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onOpenMaterial,
   onSelectSubject,
   initialQuery = '',
+  context,
 }) => {
   const [query, setQuery] = useState(initialQuery);
   const [selectedCat, setSelectedCat] = useState<'all' | MaterialCategory>('all');
@@ -85,7 +87,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     const timer = setTimeout(async () => {
       if (isSupabaseConfigured()) {
         try {
-          const results = await searchMaterialsDb(trimmed, selectedCat);
+          const results = await searchMaterialsDb(trimmed, selectedCat, undefined, context);
           setDbMaterials(results);
           setIsLoading(false);
         } catch (err: any) {
@@ -101,7 +103,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     }, 180);
 
     return () => clearTimeout(timer);
-  }, [query, selectedCat]);
+  }, [query, selectedCat, context]);
 
   // Matching subjects calculation
   const matchingSubjects = useMemo(() => {
