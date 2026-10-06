@@ -42,6 +42,7 @@ import {
   safeGoBack,
   findSubjectByIdentifier
 } from './lib/router';
+import { Analytics } from '@vercel/analytics/react';
 
 const SAVED_CONTEXT_STORAGE_KEY = 'nottora_academic_context';
 
@@ -827,6 +828,9 @@ export default function App() {
 
       {/* Toast Feedback Messages */}
       <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
+      
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
