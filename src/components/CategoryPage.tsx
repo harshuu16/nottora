@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Search, BookOpen, Sparkles, FileText, FlaskConical, Paperclip } from 'lucide-react';
-import { Material, MaterialCategory, Subject } from '../types';
+import { ArrowLeft, Search, BookOpen, Sparkles, FileText, FlaskConical, Paperclip, SlidersHorizontal } from 'lucide-react';
+import { AcademicContext, Material, MaterialCategory, Subject } from '../types';
 import { materialBelongsToSubject } from '../data/academicData';
 import { MaterialCard } from './MaterialCard';
 
@@ -13,6 +13,8 @@ interface CategoryPageProps {
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
+  context: AcademicContext;
+  onOpenContextModal?: () => void;
 }
 
 const CATEGORY_META: Record<MaterialCategory, {
@@ -62,6 +64,8 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   onDownloadMaterial,
   bookmarkedIds,
   onToggleBookmark,
+  context,
+  onOpenContextModal,
 }) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +112,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
           <span>Back to Overview</span>
         </button>
         <span className="text-xs text-[#78716C] font-mono">
-          Semester 1 · {filteredMaterials.length} Files
+          {context.branchCode} · Year {context.year} · Sem {context.semester} · {filteredMaterials.length} Files
         </span>
       </div>
 
@@ -198,6 +202,29 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
               showSubjectBadge={true}
             />
           ))}
+        </div>
+      ) : materials.length === 0 ? (
+        <div className="p-12 text-center bg-[#FFFFFF] rounded-2xl border border-[#EBE7DF]">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF7ED] border border-[#FED7AA] text-xs font-semibold text-[#C2410C] mb-4">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Coming Soon</span>
+          </div>
+          <h3 className="text-xl font-bold font-editorial text-[#1C1917] mb-2">
+            No {meta.title} available yet
+          </h3>
+          <p className="text-xs sm:text-sm text-[#78716C] max-w-md mx-auto mb-6 leading-relaxed">
+            Materials for <span className="font-semibold text-[#1C1917]">{context.collegeShort} → {context.branchCode} → Year {context.year} → Semester {context.semester}</span> are not available yet.
+          </p>
+          {onOpenContextModal && (
+            <button
+              type="button"
+              onClick={onOpenContextModal}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1C1917] text-white text-xs font-semibold hover:bg-[#292524] transition-colors"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Switch Academic Cohort</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="p-12 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">

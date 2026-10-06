@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Check, Building2, GitBranch, Calendar, GraduationCap, ArrowRight } from 'lucide-react';
 import { AcademicContext } from '../types';
 import { AVAILABLE_COLLEGES, AVAILABLE_BRANCHES, ACADEMIC_SESSION_DISPLAY } from '../data/academicData';
@@ -17,13 +17,26 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
   onSaveContext,
 }) => {
   const [selectedCollegeId, setSelectedCollegeId] = useState(
-    AVAILABLE_COLLEGES.find((c) => c.name === currentContext.college)?.id || 'pce'
+    AVAILABLE_COLLEGES.find((c) => c.name === currentContext.college || c.short === currentContext.collegeShort)?.id || 'pce'
   );
   const [selectedBranchId, setSelectedBranchId] = useState(
-    AVAILABLE_BRANCHES.find((b) => b.name === currentContext.branch)?.id || 'cse'
+    AVAILABLE_BRANCHES.find((b) => b.name === currentContext.branch || b.code === currentContext.branchCode)?.id || 'cse'
   );
-  const [selectedYear, setSelectedYear] = useState(currentContext.year);
-  const [selectedSemester, setSelectedSemester] = useState(currentContext.semester);
+  const [selectedYear, setSelectedYear] = useState(currentContext.year || 1);
+  const [selectedSemester, setSelectedSemester] = useState(currentContext.semester || 1);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCollegeId(
+        AVAILABLE_COLLEGES.find((c) => c.name === currentContext.college || c.short === currentContext.collegeShort)?.id || 'pce'
+      );
+      setSelectedBranchId(
+        AVAILABLE_BRANCHES.find((b) => b.name === currentContext.branch || b.code === currentContext.branchCode)?.id || 'cse'
+      );
+      setSelectedYear(currentContext.year || 1);
+      setSelectedSemester(currentContext.semester || 1);
+    }
+  }, [isOpen, currentContext]);
 
   if (!isOpen) return null;
 
@@ -217,7 +230,7 @@ export const AcademicContextModal: React.FC<AcademicContextModalProps> = ({
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-[#EAE5DA] bg-[#FAF8F5] flex items-center justify-between">
           <span className="text-xs text-[#78716C]">
-            Curated cohort: Poornima College of Engineering · B.Tech CSE Semester 1
+            Target Selection: {AVAILABLE_COLLEGES.find((c) => c.id === selectedCollegeId)?.name || 'PCE'} · {AVAILABLE_BRANCHES.find((b) => b.id === selectedBranchId)?.code} · Year {selectedYear} · Sem {selectedSemester}
           </span>
           <div className="flex items-center gap-2">
             <button
