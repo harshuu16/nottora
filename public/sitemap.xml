@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Homepage -->
   <url>
     <loc>https://nottora.vercel.app/</loc>
     <lastmod>2026-10-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- Categories -->
   <url>
     <loc>https://nottora.vercel.app/category/notes</loc>
     <lastmod>2026-10-26</lastmod>
@@ -33,8 +30,6 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-
-  <!-- Academic Subjects -->
   <url>
     <loc>https://nottora.vercel.app/subject/communication-skills</loc>
     <lastmod>2026-10-26</lastmod>
@@ -43,6 +38,12 @@
   </url>
   <url>
     <loc>https://nottora.vercel.app/subject/chemistry</loc>
+    <lastmod>2026-10-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/subject/engineering-physics</loc>
     <lastmod>2026-10-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -90,15 +91,189 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nottora.vercel.app/subject/engineering-physics</loc>
+    <loc>https://nottora.vercel.app/subject/non-syllabus-project</loc>
     <lastmod>2026-10-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nottora.vercel.app/subject/non-syllabus-project</loc>
+    <loc>https://nottora.vercel.app/material/467105c9-e758-43f0-96a6-0046cb2d55cf</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/c91b6c50-2744-433f-99e7-a4d42754d1f6</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/459c4c81-21e8-4cbe-a805-1e8bf8eb56f9</loc>
+    <lastmod>2026-09-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/845b844e-2198-45dc-a7c2-34ff1d6fae10</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/0d698934-3f98-4114-a218-527b763c16e7</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/d2e0173c-027e-45a7-b540-a79f750574f3</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/64e878b2-b367-475b-bbd9-ea2c76550a7d</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/c2d34db0-8bc9-4efc-b441-25520eacc630</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/a724bc3c-419d-4d51-8a64-0c29a0ad93a2</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/07fec83a-795c-4f58-b8b6-ed75bb6cfae5</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/d055165c-8096-4532-a84c-1fd24a6b49b7</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/3919d568-ca4f-4825-9aaa-037dc1920e35</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/005038a3-f9a9-46d7-9aa7-8ebf21fe970b</loc>
+    <lastmod>2026-09-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/10300660-e867-46ee-8aba-ce723bd32336</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/96d7e9ca-4e6d-427d-a532-0946e27f11cc</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/3e8d6b06-bb51-4fdc-951f-22d99b40f5d4</loc>
+    <lastmod>2026-09-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/5d91a700-9ae0-4804-9202-eebc83735236</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/a56e0189-da61-45f8-b30f-c367ee1db9a4</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/af934124-80c0-48b8-97fc-e98b588ddf40</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/88bcaffc-c525-4946-b9f0-d02ddb073bb9</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/592472e4-52d0-4839-875d-718712a6ea16</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/d8936e73-db9c-4c61-af9b-ca341f4dc0cc</loc>
+    <lastmod>2026-10-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/766a6e49-80d1-4688-8436-57ae749c1ada</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/8fb57618-26bc-43f8-aee6-9483fa6b9dfd</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/d704f514-66a2-48b7-92b0-5b3cb70892c2</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/8291df56-4291-484a-8a37-9285bb055e75</loc>
+    <lastmod>2026-10-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/b50df070-933a-462e-b483-37089addbe2d</loc>
+    <lastmod>2026-10-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/780a5ec2-a461-4171-aecd-16768090f661</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/f3396188-370a-4a22-964d-b5f488f5abf5</loc>
     <lastmod>2026-10-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://nottora.vercel.app/material/3d903562-d1c5-4d58-b0ab-9e758449772e</loc>
+    <lastmod>2026-10-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>

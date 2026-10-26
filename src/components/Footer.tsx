@@ -52,49 +52,74 @@ export const Footer: React.FC<FooterProps> = ({
               </div>
               <ul className="space-y-2">
                 <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateSubjects}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="#subjects-section"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onNavigateSubjects();
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Subjects
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateCategory('notes')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/category/notes"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onNavigateCategory('notes');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Notes
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateCategory('important-questions')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/category/important-questions"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onNavigateCategory('important-questions');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Important Questions
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateCategory('pyqs')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/category/pyqs"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onNavigateCategory('pyqs');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     PYQs
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateCategory('lab-manuals')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/category/lab-manuals"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onNavigateCategory('lab-manuals');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Lab Manuals
-                  </button>
+                  </a>
                 </li>
               </ul>
             </div>
@@ -106,40 +131,74 @@ export const Footer: React.FC<FooterProps> = ({
               </div>
               <ul className="space-y-2">
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('communication-skills')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/communication-skills"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('communication-skills');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Communication Skills
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('chemistry')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/chemistry"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('chemistry');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Chemistry
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('beee')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/beee"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('beee');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     BEEE
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('mathematics')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/engineering-mathematics"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('engineering-mathematics');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Mathematics
-                  </button>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/subject/engineering-physics"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('engineering-physics');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
+                  >
+                    Engineering Physics
+                  </a>
                 </li>
               </ul>
             </div>
@@ -151,40 +210,88 @@ export const Footer: React.FC<FooterProps> = ({
               </div>
               <ul className="space-y-2">
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('mpws')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/mpws"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('mpws');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     MPWS
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('c-programming')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/c-programming"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('c-programming');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     C Programming
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('language-lab')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/language-lab"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('language-lab');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     Language Lab
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSubject('wpl')}
-                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left"
+                  <a
+                    href="/subject/wpl"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('wpl');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
                   >
                     WPL
-                  </button>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/subject/design-thinking"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('design-thinking');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
+                  >
+                    Design Thinking
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/subject/non-syllabus-project"
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        onSelectSubject('non-syllabus-project');
+                      }
+                    }}
+                    className="hover:text-[#C2410C] transition-colors cursor-pointer text-left block"
+                  >
+                    Non-Syllabus Project
+                  </a>
                 </li>
               </ul>
             </div>

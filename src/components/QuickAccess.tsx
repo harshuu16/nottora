@@ -67,12 +67,17 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({ onSelectCategory, mate
           const count = materialsCounts[item.category] || 0;
 
           return (
-            <button
+            <a
               key={item.category}
               id={`quick-access-${item.category}`}
-              type="button"
-              onClick={() => onSelectCategory(item.category)}
-              className="group text-left p-4 rounded-xl bg-[#FFFFFF] border border-[#EBE7DF] hover:border-[#D6A485] hover:bg-[#FAF7F2] shadow-[0_1px_2px_rgba(28,25,23,0.03)] hover:shadow-[0_4px_16px_rgba(194,65,12,0.08)] transition-all duration-200 cursor-pointer flex flex-col justify-between"
+              href={`/category/${item.category}`}
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  onSelectCategory(item.category);
+                }
+              }}
+              className="group text-left p-4 rounded-xl bg-[#FFFFFF] border border-[#EBE7DF] hover:border-[#D6A485] hover:bg-[#FAF7F2] shadow-[0_1px_2px_rgba(28,25,23,0.03)] hover:shadow-[0_4px_16px_rgba(194,65,12,0.08)] transition-all duration-200 cursor-pointer flex flex-col justify-between no-underline"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
@@ -103,7 +108,7 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({ onSelectCategory, mate
                   <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </span>
               </div>
-            </button>
+            </a>
           );
         })}
       </div>

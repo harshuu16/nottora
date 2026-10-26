@@ -41,11 +41,16 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) =>
   const IconComponent = ICON_MAP[subject.iconName] || BookOpen;
 
   return (
-    <button
+    <a
       id={`subject-card-${subject.id}`}
-      type="button"
-      onClick={() => onClick(subject.id)}
-      className="group text-left w-full bg-[#FFFFFF] rounded-xl border border-[#EBE7DF] hover:border-[#D6A485] p-5 shadow-[0_1px_3px_rgba(28,25,23,0.03)] hover:shadow-[0_8px_24px_rgba(194,65,12,0.09)] transition-all duration-200 flex flex-col justify-between relative cursor-pointer"
+      href={`/subject/${encodeURIComponent(subject.slug || subject.id)}`}
+      onClick={(e) => {
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+          e.preventDefault();
+          onClick(subject.id);
+        }
+      }}
+      className="group text-left w-full bg-[#FFFFFF] rounded-xl border border-[#EBE7DF] hover:border-[#D6A485] p-5 shadow-[0_1px_3px_rgba(28,25,23,0.03)] hover:shadow-[0_8px_24px_rgba(194,65,12,0.09)] transition-all duration-200 flex flex-col justify-between relative cursor-pointer no-underline block"
     >
       <div>
         {/* Top meta row */}
@@ -105,6 +110,6 @@ export const SubjectCard: React.FC<SubjectCardProps> = ({ subject, onClick }) =>
           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
-    </button>
+    </a>
   );
 };

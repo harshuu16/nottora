@@ -1,5 +1,5 @@
 import { Material, MaterialCategory, Subject, ViewMode } from '../types';
-import { resolveSubjectIdentifier } from '../data/academicData';
+import { resolveSubjectIdentifier, getCanonicalSubject } from '../data/academicData';
 
 export interface AppRouteState {
   view: ViewMode;
@@ -65,7 +65,13 @@ export function findSubjectByIdentifier(
       s.name.toLowerCase().includes(cleanId) ||
       (s.code && s.code.length > 0 && cleanId.includes(s.code.toLowerCase()))
   );
-  return nameMatch || null;
+  if (nameMatch) return nameMatch;
+
+  // 4. Global canonical subject repository fallback (for valid subjects in other semesters/branches like Engineering Physics)
+  const canonical = getCanonicalSubject(identifier);
+  if (canonical) return canonical;
+
+  return null;
 }
 
 /**

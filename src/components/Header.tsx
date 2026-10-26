@@ -47,16 +47,21 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Left: Brand Wordmark */}
         <div className="flex items-center gap-3.5">
-          <button
+          <a
             id="brand-logo-btn"
-            type="button"
-            onClick={onNavigateHome}
-            className="flex items-center text-left group cursor-pointer"
+            href="/"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateHome();
+              }
+            }}
+            className="flex items-center text-left group cursor-pointer no-underline"
           >
             <span className="font-editorial text-2xl font-bold tracking-tight text-[#1C1917] group-hover:text-[#C2410C] transition-colors">
               Nottora
             </span>
-          </button>
+          </a>
 
           {/* Academic Context Switcher Badge */}
           <button
@@ -77,38 +82,84 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Center: Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-[#57534E]">
-          <button
+          <a
             id="nav-home"
-            type="button"
-            onClick={onNavigateHome}
+            href="/"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateHome();
+              }
+            }}
             className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
           >
             Home
-          </button>
-          <button
+          </a>
+          <a
             id="nav-subjects"
-            type="button"
-            onClick={onNavigateSubjects}
+            href="#subjects-section"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateSubjects();
+              }
+            }}
             className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
           >
             Subjects
-          </button>
-          <button
+          </a>
+          <a
+            id="nav-notes"
+            href="/category/notes"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateCategory('notes');
+              }
+            }}
+            className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
+          >
+            Notes
+          </a>
+          <a
             id="nav-important-questions"
-            type="button"
-            onClick={() => onNavigateCategory('important-questions')}
+            href="/category/important-questions"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateCategory('important-questions');
+              }
+            }}
             className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
           >
             Important Questions
-          </button>
-          <button
+          </a>
+          <a
             id="nav-pyqs"
-            type="button"
-            onClick={() => onNavigateCategory('pyqs')}
+            href="/category/pyqs"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateCategory('pyqs');
+              }
+            }}
             className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
           >
             PYQs
-          </button>
+          </a>
+          <a
+            id="nav-lab-manuals"
+            href="/category/lab-manuals"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                onNavigateCategory('lab-manuals');
+              }
+            }}
+            className="px-3 py-1.5 rounded-lg hover:text-[#1C1917] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
+          >
+            Lab Manuals
+          </a>
         </nav>
 
         {/* Right: Actions */}
@@ -195,48 +246,78 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="space-y-1">
-            <button
-              type="button"
-              onClick={() => handleNav(onNavigateHome)}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-[#EFEAE0] cursor-pointer"
+            <a
+              href="/"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(onNavigateHome);
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               Home
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav(onNavigateSubjects)}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-[#EFEAE0] cursor-pointer"
+            </a>
+            <a
+              href="#subjects-section"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(onNavigateSubjects);
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               Subjects
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav(() => onNavigateCategory('notes'))}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer"
+            </a>
+            <a
+              href="/category/notes"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(() => onNavigateCategory('notes'));
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               Notes
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav(() => onNavigateCategory('important-questions'))}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer"
+            </a>
+            <a
+              href="/category/important-questions"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(() => onNavigateCategory('important-questions'));
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               Important Questions
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav(() => onNavigateCategory('pyqs'))}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer"
+            </a>
+            <a
+              href="/category/pyqs"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(() => onNavigateCategory('pyqs'));
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               PYQs
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNav(() => onNavigateCategory('lab-manuals'))}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer"
+            </a>
+            <a
+              href="/category/lab-manuals"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleNav(() => onNavigateCategory('lab-manuals'));
+                }
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-[#44403C] hover:bg-[#EFEAE0] cursor-pointer block"
             >
               Lab Manuals
-            </button>
+            </a>
             <button
               type="button"
               onClick={() => handleNav(onOpenBookmarks)}

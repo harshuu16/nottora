@@ -7,7 +7,8 @@ import {
   ACADEMIC_SESSION_DISPLAY,
   materialBelongsToSubject,
   resolveSubjectIdentifier,
-  getCurriculumSubjects
+  getCurriculumSubjects,
+  getCanonicalSubject
 } from './data/academicData';
 import { 
   fetchSubjects, 
@@ -44,6 +45,7 @@ import {
   safeGoBack,
   findSubjectByIdentifier
 } from './lib/router';
+import { useSeoMetadata } from './lib/seo';
 
 const SAVED_CONTEXT_STORAGE_KEY = 'nottora_academic_context';
 
@@ -81,7 +83,9 @@ export default function App() {
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(false);
 
   // Navigation View Mode (synced with browser URL and history stack)
-  const [view, setView] = useState<ViewMode>({ type: 'home' });
+  const [view, setView] = useState<ViewMode>(() => {
+    return parseUrlToRouteState(getCurriculumSubjects(getInitialSavedContext()), []).view;
+  });
 
   // Search state in Hero
   const [heroSearchQuery, setHeroSearchQuery] = useState('');
@@ -169,6 +173,9 @@ export default function App() {
       totalMaterials: materials.filter((m) => materialBelongsToSubject(m, sub)).length,
     }));
   }, [subjects, materials]);
+
+  // Dynamic Page-Specific SEO Metadata (Title, Meta Description, Canonical, Social Cards, Schema.org)
+  useSeoMetadata(view, enrichedSubjects, activeMaterial);
 
   // Synchronize component state with browser history / URL
   const syncStateFromLocation = useCallback((isInitial = false) => {
@@ -627,7 +634,7 @@ export default function App() {
                  s.code === view.subjectId || 
                  s.slug === view.subjectId ||
                  (s.uuid && s.uuid === view.subjectId)
-        ) || enrichedSubjects[0]
+        ) || getCanonicalSubject(view.subjectId) || enrichedSubjects[0]
       );
     }
     return null;

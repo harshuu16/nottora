@@ -122,46 +122,66 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           {selectedCategory !== 'all' ? (
-            <button
+            <a
               id="back-to-subject-overview-btn"
-              type="button"
-              onClick={() => handleCategoryClick('all')}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer"
+              href={`/subject/${encodeURIComponent(subject.slug || subject.id)}`}
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleCategoryClick('all');
+                }
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer no-underline"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to {subject.code || subject.shortName || subject.name} Overview</span>
-            </button>
+            </a>
           ) : (
-            <button
+            <a
               id="back-to-subjects-btn"
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer"
+              href="/"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  onBack();
+                }
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md cursor-pointer no-underline"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to All Subjects</span>
-            </button>
+            </a>
           )}
         </div>
 
         {/* Dynamic Breadcrumbs Hierarchy */}
         <nav aria-label="Breadcrumbs" className="flex items-center gap-1.5 text-xs text-[#78716C]">
-          <button
-            type="button"
-            onClick={onNavigateHome || onBack}
-            className="hover:text-[#C2410C] transition-colors cursor-pointer font-medium"
+          <a
+            href="/"
+            onClick={(e) => {
+              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                e.preventDefault();
+                (onNavigateHome || onBack)();
+              }
+            }}
+            className="hover:text-[#C2410C] transition-colors cursor-pointer font-medium no-underline"
           >
             Subjects
-          </button>
+          </a>
           <span className="text-[#A8A29E]">/</span>
           {selectedCategory !== 'all' ? (
-            <button
-              type="button"
-              onClick={() => handleCategoryClick('all')}
-              className="hover:text-[#C2410C] font-mono transition-colors cursor-pointer"
+            <a
+              href={`/subject/${encodeURIComponent(subject.slug || subject.id)}`}
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                  e.preventDefault();
+                  handleCategoryClick('all');
+                }
+              }}
+              className="hover:text-[#C2410C] font-mono transition-colors cursor-pointer no-underline"
             >
               {subject.code || subject.shortName || subject.name}
-            </button>
+            </a>
           ) : (
             <span className="font-mono font-semibold text-[#1C1917] bg-[#F5F2EB] px-1.5 py-0.5 rounded border border-[#E6E1D6]">
               {subject.code || subject.shortName || subject.name}
@@ -265,13 +285,22 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
             const count = categoryCounts[tab.id] || 0;
             const isSelected = selectedCategory === tab.id;
 
+            const tabHref = tab.id === 'all'
+              ? `/subject/${encodeURIComponent(subject.slug || subject.id)}`
+              : `/subject/${encodeURIComponent(subject.slug || subject.id)}/${encodeURIComponent(tab.id)}`;
+
             return (
-              <button
+              <a
                 key={tab.id}
                 id={`cat-tab-${tab.id}`}
-                type="button"
-                onClick={() => handleCategoryClick(tab.id)}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                href={tabHref}
+                onClick={(e) => {
+                  if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                    e.preventDefault();
+                    handleCategoryClick(tab.id);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer no-underline ${
                   isSelected
                     ? 'bg-[#1C1917] text-[#FFFFFF] shadow-sm'
                     : 'bg-[#FFFFFF] text-[#57534E] hover:bg-[#F2EFE9] border border-[#EBE7DF] hover:text-[#1C1917]'
@@ -284,7 +313,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                 }`}>
                   {count}
                 </span>
-              </button>
+              </a>
             );
           })}
         </div>

@@ -105,14 +105,19 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
     <div className="pb-16 animate-in fade-in duration-200">
       {/* Back navigation */}
       <div className="mb-6 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md"
+        <a
+          href="/"
+          onClick={(e) => {
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+              e.preventDefault();
+              onBack();
+            }
+          }}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[#57534E] hover:text-[#C2410C] transition-colors p-1 -ml-1 rounded-md no-underline cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Overview</span>
-        </button>
+        </a>
         <span className="text-xs text-[#78716C] font-mono">
           {context.branchCode} · Year {context.year} · Sem {context.semester} · {filteredMaterials.length} Files
         </span>
@@ -249,6 +254,50 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
           </button>
         </div>
       )}
+
+      {/* Internal Links for Category & Subject Discoverability */}
+      <section className="mt-12 pt-8 border-t border-[#E8E2D5] bg-[#FFFFFF] rounded-2xl border border-[#E8E3D8] p-6 shadow-sm">
+        <h2 className="text-sm font-bold text-[#1C1917] uppercase tracking-wider mb-3">
+          Explore Subjects for {meta.title}
+        </h2>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {subjects.map((sub) => (
+            <a
+              key={sub.id}
+              href={`/subject/${encodeURIComponent(sub.slug || sub.id)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#FFF7ED] border border-[#E8E2D5] hover:border-[#FED7AA] text-xs font-medium text-[#44403C] hover:text-[#C2410C] transition-colors no-underline"
+            >
+              <span>{sub.name}</span>
+              {sub.code && <span className="text-[10px] font-mono text-[#A8A29E]">({sub.code})</span>}
+            </a>
+          ))}
+        </div>
+
+        <h3 className="text-xs font-bold text-[#78716C] uppercase tracking-wider mb-2.5">
+          Other Academic Categories
+        </h3>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {(['notes', 'important-questions', 'pyqs', 'lab-manuals'] as MaterialCategory[])
+            .filter((c) => c !== category)
+            .map((catKey) => {
+              const catNames: Record<string, string> = {
+                notes: 'Lecture Notes',
+                'important-questions': 'Important Questions',
+                pyqs: 'Previous Year Questions (PYQs)',
+                'lab-manuals': 'Lab Manuals',
+              };
+              return (
+                <a
+                  key={catKey}
+                  href={`/category/${catKey}`}
+                  className="px-3 py-1.5 rounded-lg bg-[#F5F1E8] hover:bg-[#EAE4D7] border border-[#E2DDD3] font-medium text-[#57534E] hover:text-[#1C1917] transition-colors no-underline"
+                >
+                  {catNames[catKey] || catKey}
+                </a>
+              );
+            })}
+        </div>
+      </section>
     </div>
   );
 };
