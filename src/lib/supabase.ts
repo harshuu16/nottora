@@ -17,6 +17,9 @@ import {
   ALL_MATERIALS as FALLBACK_MATERIALS, 
   ACADEMIC_SESSION_DISPLAY,
   CANONICAL_SEMESTER_1_MAP,
+  MASTER_SUBJECTS,
+  getCurriculumSubjects,
+  getCanonicalMasterSubject,
   resolveSubjectIdentifier,
   getCanonicalSubject,
   materialBelongsToSubject
@@ -241,26 +244,57 @@ export async function uploadMaterialPdf(
 export const uploadMaterialFile = uploadMaterialPdf;
 
 /**
+ * Checks whether a signed Supabase storage URL has an expired token.
+ */
+export function isTokenExpired(urlStr?: string): boolean {
+  if (!urlStr || !urlStr.includes('token=')) return false;
+  try {
+    const tokenPart = urlStr.split('token=')[1].split('&')[0];
+    const parts = tokenPart.split('.');
+    if (parts.length < 2) return true;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const jsonStr = typeof atob !== 'undefined' 
+      ? atob(base64) 
+      : Buffer.from(base64, 'base64').toString('utf-8');
+    const payload = JSON.parse(jsonStr);
+    const now = Math.floor(Date.now() / 1000);
+    return typeof payload.exp === 'number' && payload.exp <= now + 60;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Creates a temporary signed URL to download or open a file from the private 'materials' bucket.
  * Conforms strictly to private bucket security (never calls getPublicUrl).
  */
-export async function getMaterialSignedUrl(filePathOrUrl: string, expiresIn = 3600): Promise<string> {
+export async function getMaterialSignedUrl(
+  filePathOrUrl: string, 
+  expiresIn = 3600, 
+  forceRefresh = false
+): Promise<string> {
   const client = getSupabase();
   if (!client || !filePathOrUrl) {
     return filePathOrUrl || '';
   }
 
-  // If already a signed URL or blob/data URL, return as-is
-  if (
-    filePathOrUrl.includes('token=') ||
-    filePathOrUrl.startsWith('blob:') ||
-    filePathOrUrl.startsWith('data:')
-  ) {
+  // If already a blob/data URL, return as-is
+  if (filePathOrUrl.startsWith('blob:') || filePathOrUrl.startsWith('data:')) {
     return filePathOrUrl;
   }
 
-  // Extract clean storage path if a full Supabase URL was passed
-  let path = filePathOrUrl;
+  const isFullHttpUrl = filePathOrUrl.startsWith('http://') || filePathOrUrl.startsWith('https://');
+
+  // If URL has a signed token that is still fresh and valid and not forced to refresh, reuse it
+  if (!forceRefresh && isFullHttpUrl && filePathOrUrl.includes('token=') && !isTokenExpired(filePathOrUrl)) {
+    return filePathOrUrl;
+  }
+
+  // Extract clean storage path without query params or bucket prefix
+  let path = filePathOrUrl.split('?')[0];
   if (path.includes('/storage/v1/object/')) {
     const parts = path.split('/storage/v1/object/');
     const afterObject = parts[1] || '';
@@ -273,6 +307,7 @@ export async function getMaterialSignedUrl(filePathOrUrl: string, expiresIn = 36
     }
     path = subParts.join('/');
   }
+  path = path.replace(/^\/+/, '');
 
   try {
     const { data, error } = await client.storage
@@ -388,13 +423,17 @@ export function isCseYear1Sem1(hierarchy?: HierarchyFilter): boolean {
  * hydrating units, canonical codes, and metadata appropriately.
  */
 export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): Subject {
+  const master = getCanonicalMasterSubject(
+    dbSubject.code || dbSubject.id || dbSubject.slug || dbSubject.name
+  );
+
   const resolvedCode =
     resolveSubjectIdentifier(dbSubject.code) ||
     resolveSubjectIdentifier(dbSubject.id) ||
     resolveSubjectIdentifier(dbSubject.slug) ||
     resolveSubjectIdentifier(dbSubject.name);
 
-  const fallback = (resolvedCode ? getCanonicalSubject(resolvedCode) : null) ||
+  const fallback = master || (resolvedCode ? getCanonicalSubject(resolvedCode) : null) ||
     FALLBACK_SUBJECTS.find(
       s => s.id === dbSubject.id || 
            s.code === dbSubject.code ||
@@ -402,52 +441,54 @@ export function mapDbSubjectToSubject(dbSubject: any, totalMaterialsCount = 0): 
            s.name.toLowerCase() === (dbSubject.name || '').toLowerCase()
     );
 
-  const semesterNum = typeof dbSubject.semester === 'number' 
+  const semObj = dbSubject.semesters;
+  const branchObj = semObj?.branches;
+  const collegeObj = branchObj?.colleges;
+
+  const semesterNum = semObj?.semester_number || (typeof dbSubject.semester === 'number' 
     ? dbSubject.semester 
-    : (parseInt(String(dbSubject.semester || '1').replace(/\D/g, ''), 10) || 1);
+    : (parseInt(String(dbSubject.semester || '1').replace(/\D/g, ''), 10) || 1));
 
-  const yearNum = typeof dbSubject.year === 'number'
+  const yearNum = semObj?.year_number || (typeof dbSubject.year === 'number'
     ? dbSubject.year
-    : (parseInt(String(dbSubject.year || '1').replace(/\D/g, ''), 10) || 1);
+    : (parseInt(String(dbSubject.year || '1').replace(/\D/g, ''), 10) || 1));
 
-  const finalCode = fallback !== undefined && fallback !== null ? fallback.code : (dbSubject.code || '');
-  const finalId = fallback?.id || resolvedCode || dbSubject.id;
-  const finalShortName = fallback?.shortName || dbSubject.short_name || (
-    fallback?.name === 'Design Thinking' || dbSubject.name === 'Design Thinking' ? 'DT' :
-    fallback?.name === 'Non-Syllabus Project' || dbSubject.name === 'Non-Syllabus Project' ? 'NSP' :
+  const finalCode = dbSubject.code || master?.defaultCode || (fallback as any)?.code || '';
+  const finalId = finalCode || dbSubject.id || fallback?.id;
+  const finalShortName = master?.shortName || (fallback as any)?.shortName || dbSubject.short_name || (
+    master?.name === 'Design Thinking' || dbSubject.name === 'Design Thinking' ? 'DT' :
+    master?.name === 'Non-Syllabus Project' || dbSubject.name === 'Non-Syllabus Project' ? 'NSP' :
     undefined
   );
   const finalUuid = isValidUuid(dbSubject.id)
     ? dbSubject.id
-    : (fallback?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === finalCode)?.knownUuids?.[0]);
+    : (master?.knownUuids?.[0] || (fallback as any)?.uuid || CANONICAL_SEMESTER_1_MAP.find(m => m.code === finalCode)?.knownUuids?.[0]);
 
-  const finalCredits = fallback?.credits !== undefined
-    ? fallback.credits
-    : (typeof dbSubject.credits === 'number' ? dbSubject.credits : undefined);
+  const finalCredits = typeof dbSubject.credits === 'number'
+    ? dbSubject.credits
+    : (master?.credits !== undefined ? master.credits : ((fallback as any)?.credits ?? 3));
 
-  const finalUnits = fallback?.units !== undefined
-    ? fallback.units
-    : (fallback ? [] : [
-        { unitNumber: 1, title: 'Unit 1 Fundamentals', keyTopics: ['Core Theory', 'Key Definitions'] },
-        { unitNumber: 2, title: 'Unit 2 Advanced Concepts', keyTopics: ['Formulations', 'Derivations'] },
-        { unitNumber: 3, title: 'Unit 3 Applied Principles', keyTopics: ['Analysis', 'Problem Solving'] },
-        { unitNumber: 4, title: 'Unit 4 Core Topics', keyTopics: ['System Design', 'Implementations'] },
-        { unitNumber: 5, title: 'Unit 5 Advanced Applications', keyTopics: ['Case Studies', 'Recent Developments'] },
-      ]);
+  const finalUnits = master?.units || (fallback as any)?.units || [
+    { unitNumber: 1, title: 'Unit 1 Fundamentals', keyTopics: ['Core Theory', 'Key Definitions'] },
+    { unitNumber: 2, title: 'Unit 2 Advanced Concepts', keyTopics: ['Formulations', 'Derivations'] },
+    { unitNumber: 3, title: 'Unit 3 Applied Principles', keyTopics: ['Analysis', 'Problem Solving'] },
+    { unitNumber: 4, title: 'Unit 4 Core Topics', keyTopics: ['System Design', 'Implementations'] },
+    { unitNumber: 5, title: 'Unit 5 Advanced Applications', keyTopics: ['Case Studies', 'Recent Developments'] },
+  ];
 
   return {
     id: finalId,
     code: finalCode,
     shortName: finalShortName,
     uuid: finalUuid,
-    slug: fallback?.slug || dbSubject.slug || dbSubject.id,
-    name: fallback?.name || dbSubject.name,
+    slug: master?.slug || (fallback as any)?.slug || dbSubject.slug || dbSubject.id,
+    name: master?.name || (fallback as any)?.name || dbSubject.name,
     semester: semesterNum,
     year: yearNum,
-    branch: dbSubject.branch || fallback?.branch || 'B.Tech CSE',
-    college: fallback?.college || 'Poornima College of Engineering',
-    shortDescription: fallback?.shortDescription || dbSubject.description || `${dbSubject.name} curriculum`,
-    iconName: fallback?.iconName || dbSubject.icon_name || 'BookOpen',
+    branch: branchObj?.code || branchObj?.name || dbSubject.branch || (fallback as any)?.branch || 'B.Tech CSE',
+    college: collegeObj?.name || (fallback as any)?.college || 'Poornima College of Engineering',
+    shortDescription: master?.shortDescription || (fallback as any)?.shortDescription || dbSubject.description || `${dbSubject.name} curriculum`,
+    iconName: master?.iconName || (fallback as any)?.iconName || dbSubject.icon_name || 'BookOpen',
     credits: finalCredits,
     totalMaterials: typeof totalMaterialsCount === 'number' ? totalMaterialsCount : 0,
     units: finalUnits,
@@ -745,12 +786,15 @@ export async function fetchClasses(): Promise<DbClass[]> {
 
 /**
  * Fetch all subjects from Supabase filtered by academic hierarchy,
- * or fall back strictly to static list only if requesting default CSE Year 1 Sem 1 cohort.
+ * or fall back strictly to curriculum-mapped subjects for that exact hierarchy.
+ * Returns empty array if no curriculum mapping exists (e.g. Year 2+),
+ * strictly preventing any fallback or leakage across branches or semesters.
  */
 export async function fetchSubjects(hierarchy?: HierarchyFilter): Promise<Subject[]> {
+  const curriculumSubs = getCurriculumSubjects(hierarchy);
   const client = getSupabase();
   if (!client) {
-    return isCseYear1Sem1(hierarchy) ? FALLBACK_SUBJECTS : [];
+    return curriculumSubs;
   }
 
   try {
@@ -799,12 +843,13 @@ export async function fetchSubjects(hierarchy?: HierarchyFilter): Promise<Subjec
 
     if (subjectsErr) {
       handleSupabaseApiError('fetchSubjects', subjectsErr.message);
-      return isCseYear1Sem1(hierarchy) ? FALLBACK_SUBJECTS : [];
+      return curriculumSubs;
     }
 
     if (!dbSubjects || dbSubjects.length === 0) {
-      // If the selected hierarchy genuinely has no subjects in DB, strictly return empty array
-      return [];
+      // If the selected hierarchy has no subjects in DB, use curriculum mapping
+      // (which returns [] for Year 2+, and mapped subjects for Year 1)
+      return curriculumSubs;
     }
 
     // Also fetch material counts per subject
@@ -827,8 +872,8 @@ export async function fetchSubjects(hierarchy?: HierarchyFilter): Promise<Subjec
 
       const mapped = mapDbSubjectToSubject(row, countsMap[row.id] || 0);
       if (semObj) {
-        mapped.semester = semObj.semester_number || 1;
-        mapped.year = semObj.year_number || 1;
+        mapped.semester = semObj.semester_number || mapped.semester;
+        mapped.year = semObj.year_number || mapped.year;
       }
       if (branchObj) {
         mapped.branch = branchObj.code || branchObj.name || mapped.branch;
@@ -839,66 +884,51 @@ export async function fetchSubjects(hierarchy?: HierarchyFilter): Promise<Subjec
       return mapped;
     });
 
-    // ONLY for CSE Year 1 Semester 1, ensure canonical Semester 1 subjects are merged
-    if (isCseYear1Sem1(hierarchy)) {
-      const sem1Codes = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1 && s.code).map(s => s.code));
-      const sem1Ids = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1).map(s => s.id));
-      const sem1Slugs = new Set(FALLBACK_SUBJECTS.filter(s => s.semester === 1 && s.slug).map(s => s.slug));
-      const validSubjects = mappedList.filter(s => {
-        if (s.semester === 1) {
-          return (s.code && sem1Codes.has(s.code)) || sem1Ids.has(s.id) || (s.slug && sem1Slugs.has(s.slug));
-        }
-        return true;
-      });
+    // Filter DB subjects strictly to those that belong to the curriculum for this hierarchy
+    const curriculumMasterIds = new Set(
+      curriculumSubs.map(s => getCanonicalMasterSubject(s.slug || s.code || s.id)?.id).filter(Boolean)
+    );
 
-      const existingIds = new Set(validSubjects.map(s => s.id));
-      const existingCodes = new Set(validSubjects.map(s => s.code).filter(Boolean));
-      const existingSlugs = new Set(validSubjects.map(s => s.slug).filter(Boolean));
-      for (const fb of FALLBACK_SUBJECTS) {
-        if (!existingIds.has(fb.id) && (!fb.code || !existingCodes.has(fb.code)) && (!fb.slug || !existingSlugs.has(fb.slug))) {
-          validSubjects.push(fb);
-        }
+    const validDbSubjects = mappedList.filter(s => {
+      const master = getCanonicalMasterSubject(s.slug || s.code || s.id);
+      return master ? curriculumMasterIds.has(master.id) : false;
+    });
+
+    // Merge with curriculum-mapped subjects for this hierarchy if any are missing in DB
+    const existingMasterIds = new Set(
+      validDbSubjects.map(s => getCanonicalMasterSubject(s.slug || s.code || s.id)?.id).filter(Boolean)
+    );
+    const mergedList = [...validDbSubjects];
+
+    for (const cSub of curriculumSubs) {
+      const cMaster = getCanonicalMasterSubject(cSub.slug || cSub.code || cSub.id);
+      if (cMaster && !existingMasterIds.has(cMaster.id)) {
+        mergedList.push(cSub);
       }
-
-      const CANONICAL_ORDER = [
-        '261FY507', // Communication Skills
-        '261FY101', // Chemistry
-        '261CR104', // BEEE
-        '261FY103', // Mathematics
-        '261FY629', // MPWS
-        '261FY106', // C Programming
-        '261FY526', // Language Lab
-        '261CR124', // WPL
-        'design-thinking', // Design Thinking
-        'non-syllabus-project', // Non-Syllabus Project
-      ];
-
-      const getCanonicalRank = (s: Subject) => {
-        if (s.code && CANONICAL_ORDER.includes(s.code)) return CANONICAL_ORDER.indexOf(s.code);
-        if (s.id && CANONICAL_ORDER.includes(s.id)) return CANONICAL_ORDER.indexOf(s.id);
-        if (s.slug && CANONICAL_ORDER.includes(s.slug)) return CANONICAL_ORDER.indexOf(s.slug);
-        return -1;
-      };
-
-      validSubjects.sort((a, b) => {
-        const idxA = getCanonicalRank(a);
-        const idxB = getCanonicalRank(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-      syncDesignThinkingSubject().catch(() => {});
-      syncNonSyllabusProjectSubject().catch(() => {});
-
-      return validSubjects;
     }
 
-    return mappedList;
+    // Order according to curriculum order
+    const curriculumOrder = curriculumSubs.map(s => getCanonicalMasterSubject(s.slug || s.code || s.id)?.id);
+    mergedList.sort((a, b) => {
+      const masterA = getCanonicalMasterSubject(a.slug || a.code || a.id)?.id;
+      const masterB = getCanonicalMasterSubject(b.slug || b.code || b.id)?.id;
+      const idxA = masterA ? curriculumOrder.indexOf(masterA) : -1;
+      const idxB = masterB ? curriculumOrder.indexOf(masterB) : -1;
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (isCseYear1Sem1(hierarchy)) {
+      syncDesignThinkingSubject().catch(() => {});
+      syncNonSyllabusProjectSubject().catch(() => {});
+    }
+
+    return mergedList;
   } catch (err) {
     console.error('[Supabase fetchSubjects Exception]', err);
-    return isCseYear1Sem1(hierarchy) ? FALLBACK_SUBJECTS : [];
+    return curriculumSubs;
   }
 }
 

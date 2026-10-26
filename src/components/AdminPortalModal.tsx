@@ -306,6 +306,15 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       aliases: ['design-thinking', 'design thinking', 'dt'],
     },
     {
+      id: 'engineering-physics',
+      code: '1FY2-02',
+      name: 'Engineering Physics',
+      displayName: 'Engineering Physics (1FY2-02)',
+      slug: 'engineering-physics',
+      fallbackUuid: '98ce7c13-b3ad-4112-9c93-96df0c42e91c',
+      aliases: ['1fy2-02', 'engineering-physics', 'physics', 'engineering physics'],
+    },
+    {
       id: 'non-syllabus-project',
       code: '', // DO NOT INVENT A CODE
       name: 'Non-Syllabus Project',
@@ -317,7 +326,7 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
   ], []);
 
 
-  // Compute availableSubjectOptions: guarantees all 10 Semester 1 subjects mapped to authentic public.subjects.id
+  // Compute availableSubjectOptions: guarantees all canonical subjects mapped to authentic public.subjects.id
   const availableSubjectOptions = useMemo(() => {
     if (selectedSemesterNumber === 1) {
       const options: Array<{
@@ -363,9 +372,6 @@ export const AdminPortalModal: React.FC<AdminPortalModalProps> = ({
       if (semObj) {
         for (const dbs of dbSubjects) {
           if (dbs.semester_id === semObj.id && !options.some((o) => o.id === dbs.id)) {
-            if (dbs.slug === 'engineering-physics' || dbs.name.toLowerCase() === 'engineering physics') {
-              continue;
-            }
             options.push({
               id: dbs.id,
               uuid: dbs.id,

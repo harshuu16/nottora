@@ -6,6 +6,7 @@ import { MaterialCard } from './MaterialCard';
 interface RecentMaterialsProps {
   materials: Material[];
   onOpenMaterial: (material: Material) => void;
+  onViewMaterial?: (material: Material) => void;
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
@@ -16,6 +17,7 @@ interface RecentMaterialsProps {
 export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
   materials,
   onOpenMaterial,
+  onViewMaterial,
   onDownloadMaterial,
   bookmarkedIds,
   onToggleBookmark,
@@ -85,6 +87,7 @@ export const RecentMaterials: React.FC<RecentMaterialsProps> = ({
               key={material.id}
               material={material}
               onOpen={onOpenMaterial}
+              onView={onViewMaterial}
               onDownload={onDownloadMaterial}
               isBookmarked={bookmarkedIds.has(material.id)}
               onToggleBookmark={onToggleBookmark}

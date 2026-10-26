@@ -15,6 +15,7 @@ import { Material, MaterialCategory } from '../types';
 interface MaterialCardProps {
   material: Material;
   onOpen: (material: Material) => void;
+  onView?: (material: Material) => void;
   onDownload: (material: Material) => void;
   isBookmarked: boolean;
   onToggleBookmark: (id: string) => void;
@@ -52,6 +53,7 @@ const CATEGORY_CONFIG: Record<MaterialCategory, { label: string; icon: React.Com
 export const MaterialCard: React.FC<MaterialCardProps> = ({
   material,
   onOpen,
+  onView,
   onDownload,
   isBookmarked,
   onToggleBookmark,
@@ -156,8 +158,16 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
           <button
             id={`view-btn-${material.id}`}
             type="button"
-            onClick={() => onOpen(material)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onView) {
+                onView(material);
+              } else {
+                onOpen(material);
+              }
+            }}
             className="px-2.5 py-1 text-xs font-medium text-[#44403C] hover:text-[#1C1917] bg-[#F5F2EB] hover:bg-[#EBE6DC] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+            title={`View ${material.title}`}
           >
             <ExternalLink className="w-3 h-3" />
             <span>View</span>
@@ -166,7 +176,10 @@ export const MaterialCard: React.FC<MaterialCardProps> = ({
           <button
             id={`download-btn-${material.id}`}
             type="button"
-            onClick={() => onDownload(material)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(material);
+            }}
             className="px-2.5 py-1 text-xs font-medium text-[#FFFFFF] bg-[#C2410C] hover:bg-[#9A3412] active:bg-[#7C2D12] rounded-lg transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
           >
             <Download className="w-3 h-3" />

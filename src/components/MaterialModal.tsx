@@ -16,8 +16,9 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { Material } from '../types';
-import { getMaterialSignedUrl } from '../lib/supabase';
+import { getMaterialSignedUrl, isTokenExpired } from '../lib/supabase';
 import { ACADEMIC_SESSION_DISPLAY } from '../data/academicData';
+import { PdfCanvasViewer } from './PdfCanvasViewer';
 
 interface MaterialModalProps {
   material: Material | null;
@@ -42,21 +43,42 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoadingUrl, setIsLoadingUrl] = useState<boolean>(true);
+  const [urlResolutionTimeMs, setUrlResolutionTimeMs] = useState<number | null>(null);
 
-  useEffect(() => {
+  const resolveSignedUrl = React.useCallback(async (bypassCache = false) => {
     if (!material) {
       setSignedUrl(null);
+      setIsLoadingUrl(false);
       return;
     }
+    setIsLoadingUrl(true);
+    const tSignStart = performance.now();
     const targetPath = material.filePath || material.fileUrl;
     if (targetPath) {
-      getMaterialSignedUrl(targetPath, 3600)
-        .then((url) => setSignedUrl(url))
-        .catch(() => setSignedUrl(material.fileUrl));
+      try {
+        const url = await getMaterialSignedUrl(targetPath, 3600, bypassCache);
+        const elapsed = performance.now() - tSignStart;
+        setUrlResolutionTimeMs(elapsed);
+        console.log(
+          `%c[PdfTiming] [1/4] Resolved secure signed URL: ${elapsed.toFixed(1)}ms`,
+          'color: #0284c7; font-weight: bold; background-color: #f0f9ff; padding: 2px 6px; border-radius: 4px;'
+        );
+        setSignedUrl(url);
+        setIsLoadingUrl(false);
+      } catch {
+        setSignedUrl(material.fileUrl);
+        setIsLoadingUrl(false);
+      }
     } else {
       setSignedUrl(material.fileUrl);
+      setIsLoadingUrl(false);
     }
   }, [material]);
+
+  useEffect(() => {
+    resolveSignedUrl();
+  }, [resolveSignedUrl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -106,7 +128,7 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#FFFFFF] text-[#44403C] hover:text-[#1C1917] border border-[#D7D0C5] hover:bg-[#F5F1E8] transition-colors cursor-pointer shrink-0"
               >
                 <ArrowLeft className="w-4 h-4 text-[#C2410C]" />
-                <span className="hidden sm:inline">Back to Details</span>
+                <span className="hidden sm:inline">Back</span>
                 <span className="sm:hidden">Back</span>
               </button>
 
@@ -123,20 +145,6 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {signedUrl && (
-                <a
-                  id="pdf-viewer-new-tab-btn"
-                  href={signedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg text-[#57534E] hover:text-[#1C1917] hover:bg-[#EAE5DA] transition-colors inline-flex items-center gap-1.5"
-                  title="Open PDF in new browser tab"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Open in Tab</span>
-                </a>
-              )}
-
               <button
                 id="pdf-viewer-download-btn"
                 type="button"
@@ -150,8 +158,8 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
               <button
                 id="pdf-viewer-close-btn"
                 type="button"
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE5DA] transition-colors"
+                onClick={onClosePdfViewer || onClose}
+                className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EAE5DA] transition-colors cursor-pointer"
                 aria-label="Close document viewer"
               >
                 <X className="w-5 h-5" />
@@ -159,20 +167,30 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
             </div>
           </div>
 
-          {/* Embedded PDF iframe / Reader Frame */}
-          <div className="flex-1 bg-[#323639] relative flex flex-col items-center justify-center min-h-[400px]">
-            {signedUrl ? (
-              <iframe
-                src={signedUrl}
+          {/* PDF.js HTML5 Canvas Document Viewer (100% Client-Side, No Iframe, No External Navigation) */}
+          <div className="flex-1 bg-[#1C2128] relative flex flex-col min-h-[450px] overflow-hidden">
+            {isLoadingUrl ? (
+              <div className="text-center p-8 text-[#FAF8F5] my-auto">
+                <div className="w-9 h-9 border-3 border-[#FED7AA] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm font-medium mb-1">Loading {material.title}...</p>
+                <p className="text-xs text-[#A8A29E]">Resolving secure URL from academic storage...</p>
+              </div>
+            ) : signedUrl ? (
+              <PdfCanvasViewer
+                url={signedUrl}
                 title={material.title}
-                className="w-full h-full border-0"
+                materialId={material.id}
+                filePath={material.filePath}
+                urlResolutionTimeMs={urlResolutionTimeMs}
+                onRefreshSignedUrl={() => resolveSignedUrl(true)}
+                onDownload={() => onDownload(material)}
               />
             ) : (
-              <div className="text-center p-8 text-[#FAF8F5]">
+              <div className="text-center p-8 text-[#FAF8F5] my-auto">
                 <FileText className="w-12 h-12 mx-auto text-[#FED7AA] mb-3 opacity-80" />
                 <p className="text-sm font-medium mb-2">Preparing {material.title}...</p>
                 <p className="text-xs text-[#A8A29E] max-w-sm mx-auto">
-                  Connecting to secure document storage. If your browser restricts inline rendering, use the buttons above to open or download.
+                  Unable to load document preview. Please use the Download button above to view offline.
                 </p>
               </div>
             )}
@@ -358,41 +376,20 @@ export const MaterialModal: React.FC<MaterialModalProps> = ({
             </button>
 
             {material.fileUrl && (
-              <div className="flex items-center gap-1">
-                <button
-                  id="modal-open-pdf-btn"
-                  type="button"
-                  onClick={() => {
-                    if (onOpenPdfViewer) {
-                      onOpenPdfViewer(material);
-                    } else if (signedUrl) {
-                      window.open(signedUrl, '_blank', 'noopener,noreferrer');
-                    } else {
-                      const targetPath = material.filePath || material.fileUrl;
-                      getMaterialSignedUrl(targetPath, 3600).then((url) => {
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                      });
-                    }
-                  }}
-                  className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1C1917] bg-[#FFFFFF] border border-[#E0D9CC] hover:bg-[#F5F2EB] rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#C2410C]" />
-                  <span>Open {material.fileType.toUpperCase()}</span>
-                </button>
-
-                {signedUrl && (
-                  <a
-                    id="modal-open-tab-link"
-                    href={signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-xs font-medium text-[#78716C] hover:text-[#1C1917] hover:bg-[#F2EFE9] rounded-xl border border-[#E0D9CC] transition-colors"
-                    title="Open in new browser tab"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                )}
-              </div>
+              <button
+                id="modal-open-pdf-btn"
+                type="button"
+                onClick={() => {
+                  if (onOpenPdfViewer) {
+                    onOpenPdfViewer(material);
+                  }
+                }}
+                className="px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1C1917] bg-[#FFFFFF] border border-[#E0D9CC] hover:bg-[#F5F2EB] rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title={`View ${material.title}`}
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#C2410C]" />
+                <span>View {material.fileType.toUpperCase()}</span>
+              </button>
             )}
 
             <button

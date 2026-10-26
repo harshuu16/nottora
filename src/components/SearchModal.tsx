@@ -9,7 +9,8 @@ import {
   CornerDownLeft,
   Loader2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 import { Material, Subject, MaterialCategory, AcademicContext } from '../types';
 import { searchMaterialsDb, isSupabaseConfigured } from '../lib/supabase';
@@ -20,6 +21,7 @@ interface SearchModalProps {
   subjects: Subject[];
   materials: Material[];
   onOpenMaterial: (material: Material) => void;
+  onViewMaterial?: (material: Material) => void;
   onSelectSubject: (subjectId: string) => void;
   initialQuery?: string;
   context?: AcademicContext;
@@ -42,6 +44,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   subjects,
   materials,
   onOpenMaterial,
+  onViewMaterial,
   onSelectSubject,
   initialQuery = '',
   context,
@@ -420,10 +423,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs font-mono text-[#78716C] shrink-0 self-center">
+                        <div className="flex items-center gap-1.5 text-xs font-mono text-[#78716C] shrink-0 self-center">
                           <span className="uppercase text-[11px] font-semibold">{m.fileType}</span>
                           <span>·</span>
                           <span className="text-[11px]">{m.fileSize}</span>
+                          {onViewMaterial && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onClose();
+                                onViewMaterial(m);
+                              }}
+                              className="ml-1 px-2 py-0.5 text-xs font-medium text-[#44403C] hover:text-[#1C1917] bg-[#F5F2EB] hover:bg-[#EBE6DC] rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                              title={`View ${m.title}`}
+                            >
+                              <ExternalLink className="w-3 h-3 text-[#C2410C]" />
+                              <span>View</span>
+                            </button>
+                          )}
                           <CornerDownLeft className="w-3.5 h-3.5 text-[#A8A29E] ml-1 group-hover:text-[#C2410C]" />
                         </div>
                       </div>

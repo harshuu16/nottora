@@ -1,12 +1,14 @@
 import React from 'react';
 import { X, Bookmark, ExternalLink, Download, Trash2, ArrowRight } from 'lucide-react';
 import { Material } from '../types';
+import { getMaterialSignedUrl } from '../lib/supabase';
 
 interface BookmarksDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   bookmarkedMaterials: Material[];
   onOpenMaterial: (material: Material) => void;
+  onViewMaterial?: (material: Material) => void;
   onDownloadMaterial: (material: Material) => void;
   onRemoveBookmark: (id: string) => void;
   onClearAll: () => void;
@@ -17,6 +19,7 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
   onClose,
   bookmarkedMaterials,
   onOpenMaterial,
+  onViewMaterial,
   onDownloadMaterial,
   onRemoveBookmark,
   onClearAll,
@@ -111,11 +114,16 @@ export const BookmarksDrawer: React.FC<BookmarksDrawerProps> = ({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        onOpenMaterial(material);
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onClose();
+                        if (onViewMaterial) {
+                          onViewMaterial(material);
+                        } else {
+                          onOpenMaterial(material);
+                        }
                       }}
-                      className="px-2 py-0.5 text-xs text-[#44403C] hover:text-[#1C1917] bg-[#FFFFFF] rounded border border-[#E0D9CC] flex items-center gap-1"
+                      className="px-2 py-0.5 text-xs text-[#44403C] hover:text-[#1C1917] bg-[#FFFFFF] rounded border border-[#E0D9CC] flex items-center gap-1 cursor-pointer"
                     >
                       <ExternalLink className="w-3 h-3" />
                       View

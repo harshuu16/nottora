@@ -10,6 +10,7 @@ interface CategoryPageProps {
   materials: Material[];
   onBack: () => void;
   onOpenMaterial: (material: Material) => void;
+  onViewMaterial?: (material: Material) => void;
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
@@ -61,6 +62,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   materials,
   onBack,
   onOpenMaterial,
+  onViewMaterial,
   onDownloadMaterial,
   bookmarkedIds,
   onToggleBookmark,
@@ -196,6 +198,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
               key={material.id}
               material={material}
               onOpen={onOpenMaterial}
+              onView={onViewMaterial}
               onDownload={onDownloadMaterial}
               isBookmarked={bookmarkedIds.has(material.id)}
               onToggleBookmark={onToggleBookmark}

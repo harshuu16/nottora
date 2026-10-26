@@ -22,6 +22,7 @@ interface SubjectPageProps {
   onBack: () => void;
   onNavigateHome?: () => void;
   onOpenMaterial: (material: Material) => void;
+  onViewMaterial?: (material: Material) => void;
   onDownloadMaterial: (material: Material) => void;
   bookmarkedIds: Set<string>;
   onToggleBookmark: (id: string) => void;
@@ -35,6 +36,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
   onBack,
   onNavigateHome,
   onOpenMaterial,
+  onViewMaterial,
   onDownloadMaterial,
   bookmarkedIds,
   onToggleBookmark,
@@ -312,6 +314,25 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
         )}
       </div>
 
+      {(categoryCounts.all || 0) === 0 && (
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] flex items-start gap-3 shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-[#FFEDD5] flex items-center justify-center shrink-0 text-[#C2410C]">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h4 className="text-sm font-bold text-[#9A3412]">Materials Coming Soon</h4>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFEDD5] text-[#C2410C] font-semibold">
+                {subject.branch} · Year {subject.year} · Sem {subject.semester}
+              </span>
+            </div>
+            <p className="text-xs text-[#9A3412]/80 leading-relaxed">
+              Curriculum units and syllabus roadmap for {subject.name} are loaded below. Verified study notes, question banks, and lab manuals will appear as soon as they are uploaded for this cohort.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Material Display Area */}
       {filteredMaterials.length === 0 && (subjectSearch || selectedCategory !== 'all') ? (
         <div className="p-12 text-center bg-[#FFFFFF] rounded-xl border border-[#EBE7DF]">
@@ -360,6 +381,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                 key={material.id}
                 material={material}
                 onOpen={onOpenMaterial}
+                onView={onViewMaterial}
                 onDownload={onDownloadMaterial}
                 isBookmarked={bookmarkedIds.has(material.id)}
                 onToggleBookmark={onToggleBookmark}
@@ -445,6 +467,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                             key={material.id}
                             material={material}
                             onOpen={onOpenMaterial}
+                            onView={onViewMaterial}
                             onDownload={onDownloadMaterial}
                             isBookmarked={bookmarkedIds.has(material.id)}
                             onToggleBookmark={onToggleBookmark}
@@ -482,6 +505,7 @@ export const SubjectPage: React.FC<SubjectPageProps> = ({
                       key={material.id}
                       material={material}
                       onOpen={onOpenMaterial}
+                      onView={onViewMaterial}
                       onDownload={onDownloadMaterial}
                       isBookmarked={bookmarkedIds.has(material.id)}
                       onToggleBookmark={onToggleBookmark}

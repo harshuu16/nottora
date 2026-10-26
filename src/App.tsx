@@ -6,12 +6,14 @@ import {
   ALL_MATERIALS as DEFAULT_MATERIALS,
   ACADEMIC_SESSION_DISPLAY,
   materialBelongsToSubject,
-  resolveSubjectIdentifier
+  resolveSubjectIdentifier,
+  getCurriculumSubjects
 } from './data/academicData';
 import { 
   fetchSubjects, 
   fetchMaterials, 
   triggerFileDownload,
+  getMaterialSignedUrl,
   isCseYear1Sem1
 } from './lib/supabase';
 
@@ -42,7 +44,6 @@ import {
   safeGoBack,
   findSubjectByIdentifier
 } from './lib/router';
-import { Analytics } from '@vercel/analytics/react';
 
 const SAVED_CONTEXT_STORAGE_KEY = 'nottora_academic_context';
 
@@ -71,7 +72,7 @@ export default function App() {
   // Dynamic Subjects & Materials loaded from Supabase backend (with strict hierarchy isolation)
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     const initialCtx = getInitialSavedContext();
-    return isCseYear1Sem1(initialCtx) ? DEFAULT_SUBJECTS : [];
+    return getCurriculumSubjects(initialCtx);
   });
   const [materials, setMaterials] = useState<Material[]>(() => {
     const initialCtx = getInitialSavedContext();
@@ -139,10 +140,8 @@ export default function App() {
       setMaterials(dbMats || []);
     } catch (err) {
       console.warn('[Supabase loading notice]', err);
-      if (!isCseYear1Sem1(activeCtx)) {
-        setSubjects([]);
-        setMaterials([]);
-      }
+      setSubjects(getCurriculumSubjects(activeCtx));
+      setMaterials(isCseYear1Sem1(activeCtx) ? DEFAULT_MATERIALS : []);
     } finally {
       setIsLoadingBackend(false);
     }
@@ -341,6 +340,36 @@ export default function App() {
     } catch (err) {
       console.warn('Direct file download:', err);
     }
+  };
+
+  // Handle Direct Material View (opens PDF directly inside application's in-app viewer)
+  const handleViewMaterial = (material: Material) => {
+    setActiveMaterial(material);
+    setIsPdfViewerOpen(true);
+
+    let currentView = view;
+    if (currentView.type === 'home') {
+      const sub = enrichedSubjects.find((s) => materialBelongsToSubject(material, s));
+      if (sub) {
+        currentView = {
+          type: 'subject',
+          subjectId: sub.id,
+          initialCategory: material.category,
+        };
+        setView(currentView);
+      }
+    }
+
+    const nextRoute: AppRouteState = {
+      view: currentView,
+      materialId: material.id,
+      isPdfViewerOpen: true,
+      isSearchOpen: false,
+      isAdminOpen: false,
+      internalStep: (window.history.state?.internalStep || 0) + 1,
+    };
+    const url = buildUrlFromRouteState(nextRoute, enrichedSubjects);
+    pushRoute(nextRoute, url);
   };
 
   // Quick category material counts for badges
@@ -562,17 +591,16 @@ export default function App() {
       window.history.back();
     } else {
       setIsPdfViewerOpen(false);
-      if (activeMaterial) {
-        const nextRoute: AppRouteState = {
-          view,
-          materialId: activeMaterial.id,
-          isPdfViewerOpen: false,
-          isSearchOpen: false,
-          isAdminOpen: false,
-          internalStep: 0,
-        };
-        replaceRoute(nextRoute, buildUrlFromRouteState(nextRoute, enrichedSubjects));
-      }
+      setActiveMaterial(null);
+      const nextRoute: AppRouteState = {
+        view,
+        materialId: null,
+        isPdfViewerOpen: false,
+        isSearchOpen: false,
+        isAdminOpen: false,
+        internalStep: 0,
+      };
+      replaceRoute(nextRoute, buildUrlFromRouteState(nextRoute, enrichedSubjects));
     }
   };
 
@@ -681,6 +709,7 @@ export default function App() {
                         key={mat.id}
                         material={mat}
                         onOpen={handleOpenMaterial}
+                        onView={handleViewMaterial}
                         onDownload={handleDownload}
                         isBookmarked={bookmarkedIds.has(mat.id)}
                         onToggleBookmark={handleToggleBookmark}
@@ -716,6 +745,7 @@ export default function App() {
             <RecentMaterials
               materials={materials}
               onOpenMaterial={handleOpenMaterial}
+              onViewMaterial={handleViewMaterial}
               onDownloadMaterial={handleDownload}
               bookmarkedIds={bookmarkedIds}
               onToggleBookmark={handleToggleBookmark}
@@ -735,6 +765,7 @@ export default function App() {
             onBack={handleBackFromSubject}
             onNavigateHome={handleNavigateHome}
             onOpenMaterial={handleOpenMaterial}
+            onViewMaterial={handleViewMaterial}
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
@@ -750,6 +781,7 @@ export default function App() {
             materials={materials}
             onBack={handleBackFromCategory}
             onOpenMaterial={handleOpenMaterial}
+            onViewMaterial={handleViewMaterial}
             onDownloadMaterial={handleDownload}
             bookmarkedIds={bookmarkedIds}
             onToggleBookmark={handleToggleBookmark}
@@ -786,6 +818,7 @@ export default function App() {
         subjects={enrichedSubjects}
         materials={materials}
         onOpenMaterial={handleOpenMaterial}
+        onViewMaterial={handleViewMaterial}
         onSelectSubject={(id) => handleSelectSubject(id)}
         initialQuery={searchModalInitialQuery}
         context={context}
@@ -797,6 +830,7 @@ export default function App() {
         onClose={() => setIsBookmarksDrawerOpen(false)}
         bookmarkedMaterials={bookmarkedMaterialsList}
         onOpenMaterial={handleOpenMaterial}
+        onViewMaterial={handleViewMaterial}
         onDownloadMaterial={handleDownload}
         onRemoveBookmark={handleToggleBookmark}
         onClearAll={() => setBookmarkedIds(new Set())}
@@ -828,9 +862,6 @@ export default function App() {
 
       {/* Toast Feedback Messages */}
       <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
-      
-      {/* Vercel Web Analytics */}
-      <Analytics />
     </div>
   );
 }
