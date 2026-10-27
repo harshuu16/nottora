@@ -12,6 +12,7 @@ interface SeoConfig {
   description: string;
   canonicalUrl: string;
   ogType?: 'website' | 'article';
+  ogImage?: string;
   jsonLd?: Record<string, any>;
 }
 
@@ -93,6 +94,15 @@ export function applySeoMetadata(config: SeoConfig): void {
     return meta;
   });
 
+  const defaultShareImage = `${SITE_ORIGIN}/favicon-512x512.png`;
+  const shareImage = config.ogImage || defaultShareImage;
+
+  updateMetaTag('meta[property="og:image"]', 'content', shareImage, () => {
+    const meta = document.createElement('meta');
+    meta.setAttribute('property', 'og:image');
+    return meta;
+  });
+
   // 5. Twitter Card Tags
   updateMetaTag('meta[name="twitter:card"]', 'content', 'summary_large_image', () => {
     const meta = document.createElement('meta');
@@ -107,6 +117,11 @@ export function applySeoMetadata(config: SeoConfig): void {
   updateMetaTag('meta[name="twitter:description"]', 'content', config.description, () => {
     const meta = document.createElement('meta');
     meta.name = 'twitter:description';
+    return meta;
+  });
+  updateMetaTag('meta[name="twitter:image"]', 'content', shareImage, () => {
+    const meta = document.createElement('meta');
+    meta.name = 'twitter:image';
     return meta;
   });
 

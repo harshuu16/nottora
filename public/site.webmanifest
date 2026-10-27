@@ -1,0 +1,21 @@
+{
+  "name": "Nottora",
+  "short_name": "Nottora",
+  "description": "Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals.",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "theme_color": "#1C1917",
+  "background_color": "#FBF9F5",
+  "display": "standalone"
+}
