@@ -186,7 +186,7 @@ export function getSeoConfigForRoute(
         publisher: {
           '@type': 'EducationalOrganization',
           name: 'Nottora',
-          url: SITE_ORIGIN,
+          url: `${SITE_ORIGIN}/`,
         },
       },
     };
@@ -220,7 +220,7 @@ export function getSeoConfigForRoute(
           breadcrumb: {
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_ORIGIN },
+              { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_ORIGIN}/` },
               { '@type': 'ListItem', position: 2, name: subjectName, item: `${SITE_ORIGIN}/subject/${encodeURIComponent(subjectSlug)}` },
               { '@type': 'ListItem', position: 3, name: catInfo?.title || category, item: canonicalUrl },
             ],
@@ -248,7 +248,7 @@ export function getSeoConfigForRoute(
         provider: {
           '@type': 'EducationalOrganization',
           name: 'Nottora',
-          url: SITE_ORIGIN,
+          url: `${SITE_ORIGIN}/`,
         },
         url: canonicalUrl,
       },
@@ -275,7 +275,7 @@ export function getSeoConfigForRoute(
         breadcrumb: {
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_ORIGIN },
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_ORIGIN}/` },
             { '@type': 'ListItem', position: 2, name: catInfo.title, item: canonicalUrl },
           ],
         },
@@ -293,11 +293,15 @@ export function getSeoConfigForRoute(
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       name: 'Nottora',
-      url: SITE_ORIGIN,
+      alternateName: ['Nottora Notes', 'Nottora Academic Library', 'Nottora App'],
+      url: `${SITE_ORIGIN}/`,
       description: DEFAULT_DESCRIPTION,
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${SITE_ORIGIN}/?search={search_term_string}`,
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${SITE_ORIGIN}/?search={search_term_string}`,
+        },
         'query-input': 'required name=search_term_string',
       },
     },

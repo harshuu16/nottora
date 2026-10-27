@@ -8,11 +8,12 @@
     <meta name="description" content="Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals." />
     <link rel="canonical" href="https://nottora.vercel.app/" />
 
-    <!-- Favicon & App Icons (Preserving Nottora Official Identity) -->
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <!-- Favicon & App Icons (Official Nottora Brand Identity) -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#1C1917" />
@@ -32,13 +33,27 @@
     <meta name="twitter:description" content="Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals." />
     <meta name="twitter:image" content="https://nottora.vercel.app/favicon-512x512.png" />
 
+    <!-- Google Search Site Name & Structured Data -->
     <script id="seo-structured-data" type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "Nottora",
+        "alternateName": [
+          "Nottora Notes",
+          "Nottora Academic Library",
+          "Nottora App"
+        ],
         "url": "https://nottora.vercel.app/",
-        "description": "Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals."
+        "description": "Digital academic library and study repository for college students to discover, organize, and study notes, important questions, PYQs, and lab manuals.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://nottora.vercel.app/?search={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
       }
     </script>
     <script>
